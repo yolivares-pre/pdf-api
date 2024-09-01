@@ -2,6 +2,7 @@
 import express from "express";
 import { PDFDocument, rgb, StandardFonts } from "pdf-lib";
 import fs from "fs";
+import fontkit from "@pdf-lib/fontkit"; // Importa fontkit
 
 const app = express();
 
@@ -55,13 +56,31 @@ app.post("/api/create-pdf", async (req, res) => {
 
     // Crear un nuevo documento PDF
     const pdfDoc = await PDFDocument.create();
+
+    // Registrar fontkit con el documento PDF
+    pdfDoc.registerFontkit(fontkit);
+
     const page = pdfDoc.addPage([595, 842]); // Tamaño A4
-    const font = await pdfDoc.embedFont(StandardFonts.Helvetica);
-    const fontSize = 12;
     const margin = 50;
     let currentY = page.getHeight() - margin;
 
-    console.log(page.getHeight());
+    // Cargar todas las fuentes desde la carpeta assets/fonts
+    const boldFontBytes = fs.readFileSync("./assets/fonts/gobCL_Bold.otf");
+    const heavyFontBytes = fs.readFileSync("./assets/fonts/gobCL_Heavy.otf");
+    const lightFontBytes = fs.readFileSync("./assets/fonts/gobCL_Light.otf");
+    const regularFontBytes = fs.readFileSync(
+      "./assets/fonts/gobCL_Regular.otf"
+    );
+
+    // Embebir las fuentes en el PDF
+    const boldFont = await pdfDoc.embedFont(boldFontBytes);
+    const heavyFont = await pdfDoc.embedFont(heavyFontBytes);
+    const lightFont = await pdfDoc.embedFont(lightFontBytes);
+    const regularFont = await pdfDoc.embedFont(regularFontBytes);
+
+    // Definir la fuente básica como regular
+    const baseFont = regularFont;
+    const fontSize = 24;
 
     // Cargar la imagen desde el sistema de archivos
     const bicolor_line = "./assets/bicolor_line.png"; // Ruta a la imagen Bicolor
@@ -99,24 +118,24 @@ app.post("/api/create-pdf", async (req, res) => {
     const subtitle = `Región de ${region}`;
 
     // Asegúrate de calcular el ancho del texto con el mismo tamaño de fuente que usarás para dibujar
-    const titleWidth = font.widthOfTextAtSize(title, fontSize + 4);
-    const subtitleWidth = font.widthOfTextAtSize(subtitle, fontSize + 2);
+    const titleWidth = boldFont.widthOfTextAtSize(title, fontSize + 4);
+    const subtitleWidth = baseFont.widthOfTextAtSize(subtitle, fontSize + 2);
 
-    // Centrar el título
+    // Centrar el título usando la fuente en negrita
     page.drawText(title, {
       x: (page.getWidth() - titleWidth) / 2, // Calcular x correctamente para centrar
       y: 700, // Posición y fija
       size: fontSize + 4,
-      font,
+      font: boldFont, // Usar la fuente en negrita
       color: rgb(0, 0, 0),
     });
 
-    // Centrar el subtítulo
+    // Centrar el subtítulo usando la fuente regular
     page.drawText(subtitle, {
       x: (page.getWidth() - subtitleWidth) / 2, // Calcular x correctamente para centrar
       y: 680, // Posición y fija
       size: fontSize + 2,
-      font,
+      font: baseFont, // Usar la fuente regular
     });
 
     // Información principal
