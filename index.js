@@ -218,7 +218,7 @@ app.post("/api/create-pdf", async (req, res) => {
       "Content-Disposition",
       `attachment; filename="${region}_${mes}.pdf"`
     );
-    res.send(pdfBytes);
+    res.end(pdfBytes);
   } catch (error) {
     console.error("Error al generar el PDF:", error);
     res.status(500).send("Error al generar el PDF");
