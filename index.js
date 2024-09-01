@@ -217,6 +217,10 @@ app.post("/api/create-pdf", async (req, res) => {
   }
 });
 
+app.get("/", (req, res) => {
+    res.redirect("/api/create-pdf");
+  });
+
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
   console.log(`Server is running on port ${PORT}`);
