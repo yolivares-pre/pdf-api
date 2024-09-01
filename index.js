@@ -4,6 +4,14 @@ import { PDFDocument, rgb, StandardFonts } from "pdf-lib";
 
 const app = express();
 
+// Middleware para habilitar CORS manualmente
+app.use((req, res, next) => {
+  res.setHeader('Access-Control-Allow-Origin', '*'); // Permitir todas las solicitudes de origen
+  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS'); // Métodos permitidos
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type'); // Encabezados permitidos
+  next();
+});
+
 // Middleware para procesar JSON en las solicitudes
 app.use(express.json());
 
