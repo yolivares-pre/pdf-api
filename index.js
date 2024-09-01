@@ -54,17 +54,14 @@ app.post("/api/create-pdf", async (req, res) => {
       cargo,
     } = req.body;
 
-    // Crear un nuevo documento PDF
     const pdfDoc = await PDFDocument.create();
-
-    // Registrar fontkit con el documento PDF
-    pdfDoc.registerFontkit(fontkit);
+    pdfDoc.registerFontkit(fontkit); // Registrar fontkit
 
     const page = pdfDoc.addPage([595, 842]); // Tamaño A4
     const margin = 50;
-    let currentY = page.getHeight() - margin;
+    const contentWidth = page.getWidth() - 2 * margin;
 
-    // Cargar todas las fuentes desde la carpeta assets/fonts
+    // Cargar y embeber las fuentes
     const boldFontBytes = fs.readFileSync("./assets/fonts/gobCL_Bold.otf");
     const heavyFontBytes = fs.readFileSync("./assets/fonts/gobCL_Heavy.otf");
     const lightFontBytes = fs.readFileSync("./assets/fonts/gobCL_Light.otf");
@@ -72,13 +69,11 @@ app.post("/api/create-pdf", async (req, res) => {
       "./assets/fonts/gobCL_Regular.otf"
     );
 
-    // Embebir las fuentes en el PDF
     const boldFont = await pdfDoc.embedFont(boldFontBytes);
     const heavyFont = await pdfDoc.embedFont(heavyFontBytes);
     const lightFont = await pdfDoc.embedFont(lightFontBytes);
     const regularFont = await pdfDoc.embedFont(regularFontBytes);
 
-    // Definir la fuente básica como regular
     const baseFont = regularFont;
     const fontSize = 12;
 
@@ -111,34 +106,91 @@ app.post("/api/create-pdf", async (req, res) => {
       height: 47, // Altura de la imagen
     });
 
-    // TEXTOS
-
-    // Título y encabezado correctamente centrados
+    // Dibujar título y subtítulo
     const title = `Informe técnico ${mes.toLowerCase()}`;
     const subtitle = `Región de ${region}`;
 
-    // Asegúrate de calcular el ancho del texto con el mismo tamaño de fuente que usarás para dibujar
     const titleWidth = boldFont.widthOfTextAtSize(title, fontSize + 4);
     const subtitleWidth = baseFont.widthOfTextAtSize(subtitle, fontSize + 2);
 
-    // Centrar el título usando la fuente en negrita
     page.drawText(title, {
-      x: (page.getWidth() - titleWidth ) / 2, // Calcular x correctamente para centrar
-      y: 700, // Posición y fija
+      x: (page.getWidth() - titleWidth) / 2,
+      y: 700,
       size: fontSize + 4,
-      font: boldFont, // Usar la fuente en negrita
+      font: boldFont,
       color: rgb(0, 0, 0),
     });
 
-    // Centrar el subtítulo usando la fuente regular
     page.drawText(subtitle, {
-      x: (page.getWidth() - subtitleWidth) / 2, // Calcular x correctamente para centrar
-      y: 680, // Posición y fija
+      x: (page.getWidth() - subtitleWidth) / 2,
+      y: 680,
       size: fontSize + 2,
-      font: baseFont, // Usar la fuente regular
+      font: baseFont,
     });
 
-    // Información principal
+   // Texto para insertar en el rectángulo
+   const textContent = `El equipo correspondiente a la Delegación Presidencial Regional de Ñuble, realiza la primera mesa Tripartita del período y consigna un plan de mitigación por las altas tasas de ausentismo laboral que afectan directamente la relación con los órganos colaboradores quienes resienten la mantención de los trabajadores y trabajadoras del Programa Inversión en la Comunidad en sus instituciones.\n\nSe cargan los beneficiarios definitivos acogidos al Plan de Egreso en sus modalidades Bono Complemento a la Pensión y Bono de Incentivo al Retiro.\n\nEl Organo Ejecutor gestiona la implementación piloto del Plan de Cuidados. Se observan las gestiones administrativas y técnicas del proceso para evaluar un período de prueba que asegure el cumplimiento de objetivos del Programa.`;
+
+   // Dividir el texto en líneas respetando los saltos de línea
+   const splitLines = (text, maxWidth, fontSize) => {
+     const words = text.split(' ');
+     let lines = [];
+     let currentLine = '';
+     
+     words.forEach(word => {
+       const testLine = currentLine + (currentLine ? ' ' : '') + word;
+       const testLineWidth = regularFont.widthOfTextAtSize(testLine, fontSize);
+       
+       if (testLineWidth < maxWidth) {
+         currentLine = testLine;
+       } else {
+         lines.push(currentLine);
+         currentLine = word;
+       }
+     });
+
+     if (currentLine) lines.push(currentLine);
+     return lines;
+   };
+
+   // Procesar el texto para respetar los saltos de línea
+   const paragraphs = textContent.split('\n');
+   let allLines = [];
+   paragraphs.forEach(paragraph => {
+     const lines = splitLines(paragraph, contentWidth - 20, fontSize);
+     allLines = allLines.concat(lines, ''); // Añadir un espacio entre párrafos
+   });
+
+   // Calcular la altura total del bloque de texto
+   const lineHeight = 14; // Ajustar según sea necesario
+   const boxHeight = allLines.length * lineHeight + 20; // Añadir margen interno
+
+   const boxX = margin;
+   const boxY = 550 - boxHeight; // Ajustar la posición Y según sea necesario
+
+   // Dibujar el rectángulo
+   page.drawRectangle({
+     x: boxX,
+     y: boxY,
+     width: contentWidth,
+     height: boxHeight,
+     borderColor: rgb(0, 0, 0),
+     borderWidth: 1,
+   });
+
+   // Dibujar el texto dentro del rectángulo
+   let currentY = boxY + boxHeight - 15;
+   allLines.forEach(line => {
+     page.drawText(line, {
+       x: boxX + 10, // Un pequeño margen dentro del rectángulo
+       y: currentY,
+       size: fontSize,
+       font: regularFont,
+       color: rgb(0, 0, 0),
+       lineHeight: lineHeight,
+     });
+     currentY -= lineHeight; // Mover la posición Y hacia abajo para la siguiente línea
+   });
     // currentY -= 30;
     // page.drawText(`Folios: ${folios}`, {
     //   x: margin,
@@ -146,6 +198,7 @@ app.post("/api/create-pdf", async (req, res) => {
     //   size: fontSize,
     //   font,
     // });
+
     // currentY -= 20;
     // page.drawText(`Nombre ejecutora/s final/es: ${ejecutora}`, {
     //   x: margin,
