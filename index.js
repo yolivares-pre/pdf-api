@@ -71,6 +71,8 @@ app.post("/api/create-pdf", async (req, res) => {
     const baseFont = regularFont;
     const fontSize = 12;
 
+    /* IMÁGENES */
+
     // Cargar y embeber las imágenes usando la función modularizada
     const bicolorImage = await loadAndEmbedImage(
       pdfDoc,
@@ -93,6 +95,8 @@ app.post("/api/create-pdf", async (req, res) => {
       height: 47,
     });
 
+    /* TÌTULO Y SUBTÍTULO */
+
     // Dibujar título y subtítulo
     const title = `Informe técnico ${mes.toLowerCase()}`;
     const subtitle = `Región de ${region}`;
@@ -102,7 +106,7 @@ app.post("/api/create-pdf", async (req, res) => {
 
     page.drawText(title, {
       x: (page.getWidth() - titleWidth) / 2,
-      y: 700,
+      y: 720,
       size: fontSize + 4,
       font: boldFont,
       color: rgb(0, 0, 0),
@@ -110,10 +114,67 @@ app.post("/api/create-pdf", async (req, res) => {
 
     page.drawText(subtitle, {
       x: (page.getWidth() - subtitleWidth) / 2,
-      y: 680,
+      y: 705,
       size: fontSize + 2,
       font: baseFont,
     });
+
+    /* CAMPOS DINÁMICOS */
+
+    // About workers
+    page.drawText("Datos generales de beneficiarias/os", {
+      x: margin,
+      y: 670,
+      size: fontSize + 1,
+      font: boldFont,
+      color: rgb(0, 0, 0),
+    });
+
+    // Datos para la tabla
+    const tableData = [
+      ["Beneficiarias/os activas/os", `${encontradas}`],
+      ["Beneficiarias/os no activas/os", `${ausentes}`],
+      ["Beneficiarias/os que renunciaron", `${renuncias}`],
+      ["Beneficiarias/os desvinculadas/os", `${fiscalizados}`],
+      ["Beneficiarias/os fallecidas/os", `${fallecidos}`],
+      ["Total beneficiarias/os", "227"],
+      ["Total supervisiones", "100"],
+    ];
+
+    // Posiciones iniciales para la tabla
+    let startX = margin;
+    let startY = 660; // Ajusta según sea necesario
+    const rowHeight = 20;
+    const colWidths = [395, 100]; // Ajustar según el ancho deseado para cada columna
+
+    // Dibujar las filas de la tabla
+    tableData.forEach((row, rowIndex) => {
+      row.forEach((cellText, colIndex) => {
+        // Dibujar el rectángulo de la celda
+        page.drawRectangle({
+          x: startX + colWidths.slice(0, colIndex).reduce((a, b) => a + b, 0), // Posición acumulativa de las columnas
+          y: startY - rowHeight * (rowIndex + 1),
+          width: colWidths[colIndex],
+          height: rowHeight,
+          borderColor: rgb(0, 0, 0),
+          borderWidth: 1,
+        });
+
+        // Dibujar el texto dentro de la celda
+        page.drawText(cellText, {
+          x:
+            startX +
+            colWidths.slice(0, colIndex).reduce((a, b) => a + b, 0) +
+            5, // Un pequeño margen interno
+          y: startY - rowHeight * (rowIndex + 1) + rowHeight / 4, // Ajustar verticalmente para centrar el texto
+          size: fontSize,
+          font: regularFont,
+          color: rgb(0, 0, 0),
+        });
+      });
+    });
+
+    /* SUPERVISIONS DETAILS */
 
     // Texto para insertar en el rectángulo
     const textContent = `El equipo correspondiente a la Delegación Presidencial Regional de Ñuble, realiza la primera mesa Tripartita del período y consigna un plan de mitigación por las altas tasas de ausentismo laboral que afectan directamente la relación con los órganos colaboradores quienes resienten la mantención de los trabajadores y trabajadoras del Programa Inversión en la Comunidad en sus instituciones.\n\nSe cargan los beneficiarios definitivos acogidos al Plan de Egreso en sus modalidades Bono Complemento a la Pensión y Bono de Incentivo al Retiro.\n\nEl Organo Ejecutor gestiona la implementación piloto del Plan de Cuidados. Se observan las gestiones administrativas y técnicas del proceso para evaluar un período de prueba que asegure el cumplimiento de objetivos del Programa.`;
@@ -156,28 +217,28 @@ app.post("/api/create-pdf", async (req, res) => {
     const boxY = 550 - boxHeight; // Ajustar la posición Y según sea necesario
 
     // Dibujar el rectángulo
-    page.drawRectangle({
-      x: boxX,
-      y: boxY,
-      width: contentWidth,
-      height: boxHeight,
-      borderColor: rgb(0, 0, 0),
-      borderWidth: 1,
-    });
+    // page.drawRectangle({
+    //   x: boxX,
+    //   y: boxY,
+    //   width: contentWidth,
+    //   height: boxHeight,
+    //   borderColor: rgb(0, 0, 0),
+    //   borderWidth: 1,
+    // });
 
-    // Dibujar el texto dentro del rectángulo
-    let currentY = boxY + boxHeight - 15;
-    allLines.forEach((line) => {
-      page.drawText(line, {
-        x: boxX + 10, // Un pequeño margen dentro del rectángulo
-        y: currentY,
-        size: fontSize,
-        font: regularFont,
-        color: rgb(0, 0, 0),
-        lineHeight: lineHeight,
-      });
-      currentY -= lineHeight; // Mover la posición Y hacia abajo para la siguiente línea
-    });
+    // // Dibujar el texto dentro del rectángulo
+    // let currentY = boxY + boxHeight - 15;
+    // allLines.forEach((line) => {
+    //   page.drawText(line, {
+    //     x: boxX + 10, // Un pequeño margen dentro del rectángulo
+    //     y: currentY,
+    //     size: fontSize,
+    //     font: regularFont,
+    //     color: rgb(0, 0, 0),
+    //     lineHeight: lineHeight,
+    //   });
+    //   currentY -= lineHeight; // Mover la posición Y hacia abajo para la siguiente línea
+    // });
     // currentY -= 30;
     // page.drawText(`Folios: ${folios}`, {
     //   x: margin,
