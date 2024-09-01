@@ -4,6 +4,7 @@ import { PDFDocument, rgb, StandardFonts } from "pdf-lib";
 import fs from "fs";
 import fontkit from "@pdf-lib/fontkit"; // Importa fontkit
 import { loadFonts } from "./utils/fonts.js";
+import { loadAndEmbedImage, drawImage } from "./utils/images.js"; // Importa las funciones para imágenes
 
 const app = express();
 
@@ -63,38 +64,33 @@ app.post("/api/create-pdf", async (req, res) => {
     const contentWidth = page.getWidth() - 2 * margin; // 495 de espacio disponible
 
     // Cargar y embeber las fuentes usando la función modularizada
-    const { boldFont, heavyFont, lightFont, regularFont } = await loadFonts(pdfDoc);
+    const { boldFont, heavyFont, lightFont, regularFont } = await loadFonts(
+      pdfDoc
+    );
 
     const baseFont = regularFont;
     const fontSize = 12;
 
-    // Cargar la imagen desde el sistema de archivos
-    const bicolor_line = "./assets/bicolor_line.png"; // Ruta a la imagen Bicolor
-    const logo_pic = "./assets/logo_pic.png"; // Ruta a la imagen Logo
-    const BicolorimageBytes = fs.readFileSync(bicolor_line);
-    const LogoimageBytes = fs.readFileSync(logo_pic);
+    // Cargar y embeber las imágenes usando la función modularizada
+    const bicolorImage = await loadAndEmbedImage(
+      pdfDoc,
+      "./assets/bicolor_line.png"
+    );
+    const logoImage = await loadAndEmbedImage(pdfDoc, "./assets/logo_pic.png");
 
-    // Insertar la imagen en el documento PDF
-    const bicolor_image = await pdfDoc.embedPng(BicolorimageBytes); // Embed la imagen PNG
-    const logo_image = await pdfDoc.embedPng(LogoimageBytes); // Embed la imagen PNG
-    const imageDims = bicolor_image.scale(1); // Escalar la imagen si es necesario
-
-    // IMAGENES
-
-    // Dibujar line en la página
-    page.drawImage(bicolor_image, {
-      x: 50, // Posición X a 50px desde el borde izquierdo
-      y: page.getHeight() - 7, // Posición Y arriba de la página
-      width: 104, // Ancho de la imagen
-      height: 7, // Altura de la imagen
+    // Dibujar las imágenes en la página
+    drawImage(page, bicolorImage, {
+      x: margin,
+      y: page.getHeight() - 7,
+      width: 104,
+      height: 7,
     });
 
-    // Dibujar logo en la página
-    page.drawImage(logo_image, {
-      x: 50, // Posición X a 50px desde el borde izquierdo
-      y: page.getHeight() - 100, // Posición Y arriba de la página
-      width: 105, // Ancho de la imagen
-      height: 47, // Altura de la imagen
+    drawImage(page, logoImage, {
+      x: margin,
+      y: page.getHeight() - 100,
+      width: 105,
+      height: 47,
     });
 
     // Dibujar título y subtítulo
@@ -119,69 +115,69 @@ app.post("/api/create-pdf", async (req, res) => {
       font: baseFont,
     });
 
-   // Texto para insertar en el rectángulo
-   const textContent = `El equipo correspondiente a la Delegación Presidencial Regional de Ñuble, realiza la primera mesa Tripartita del período y consigna un plan de mitigación por las altas tasas de ausentismo laboral que afectan directamente la relación con los órganos colaboradores quienes resienten la mantención de los trabajadores y trabajadoras del Programa Inversión en la Comunidad en sus instituciones.\n\nSe cargan los beneficiarios definitivos acogidos al Plan de Egreso en sus modalidades Bono Complemento a la Pensión y Bono de Incentivo al Retiro.\n\nEl Organo Ejecutor gestiona la implementación piloto del Plan de Cuidados. Se observan las gestiones administrativas y técnicas del proceso para evaluar un período de prueba que asegure el cumplimiento de objetivos del Programa.`;
+    // Texto para insertar en el rectángulo
+    const textContent = `El equipo correspondiente a la Delegación Presidencial Regional de Ñuble, realiza la primera mesa Tripartita del período y consigna un plan de mitigación por las altas tasas de ausentismo laboral que afectan directamente la relación con los órganos colaboradores quienes resienten la mantención de los trabajadores y trabajadoras del Programa Inversión en la Comunidad en sus instituciones.\n\nSe cargan los beneficiarios definitivos acogidos al Plan de Egreso en sus modalidades Bono Complemento a la Pensión y Bono de Incentivo al Retiro.\n\nEl Organo Ejecutor gestiona la implementación piloto del Plan de Cuidados. Se observan las gestiones administrativas y técnicas del proceso para evaluar un período de prueba que asegure el cumplimiento de objetivos del Programa.`;
 
-   // Dividir el texto en líneas respetando los saltos de línea
-   const splitLines = (text, maxWidth, fontSize) => {
-     const words = text.split(' ');
-     let lines = [];
-     let currentLine = '';
-     
-     words.forEach(word => {
-       const testLine = currentLine + (currentLine ? ' ' : '') + word;
-       const testLineWidth = regularFont.widthOfTextAtSize(testLine, fontSize);
-       
-       if (testLineWidth < maxWidth) {
-         currentLine = testLine;
-       } else {
-         lines.push(currentLine);
-         currentLine = word;
-       }
-     });
+    // Dividir el texto en líneas respetando los saltos de línea
+    const splitLines = (text, maxWidth, fontSize) => {
+      const words = text.split(" ");
+      let lines = [];
+      let currentLine = "";
 
-     if (currentLine) lines.push(currentLine);
-     return lines;
-   };
+      words.forEach((word) => {
+        const testLine = currentLine + (currentLine ? " " : "") + word;
+        const testLineWidth = regularFont.widthOfTextAtSize(testLine, fontSize);
 
-   // Procesar el texto para respetar los saltos de línea
-   const paragraphs = textContent.split('\n');
-   let allLines = [];
-   paragraphs.forEach(paragraph => {
-     const lines = splitLines(paragraph, contentWidth - 20, fontSize);
-     allLines = allLines.concat(lines, ''); // Añadir un espacio entre párrafos
-   });
+        if (testLineWidth < maxWidth) {
+          currentLine = testLine;
+        } else {
+          lines.push(currentLine);
+          currentLine = word;
+        }
+      });
 
-   // Calcular la altura total del bloque de texto
-   const lineHeight = 14; // Ajustar según sea necesario
-   const boxHeight = allLines.length * lineHeight + 20; // Añadir margen interno
+      if (currentLine) lines.push(currentLine);
+      return lines;
+    };
 
-   const boxX = margin;
-   const boxY = 550 - boxHeight; // Ajustar la posición Y según sea necesario
+    // Procesar el texto para respetar los saltos de línea
+    const paragraphs = textContent.split("\n");
+    let allLines = [];
+    paragraphs.forEach((paragraph) => {
+      const lines = splitLines(paragraph, contentWidth - 20, fontSize);
+      allLines = allLines.concat(lines, ""); // Añadir un espacio entre párrafos
+    });
 
-   // Dibujar el rectángulo
-   page.drawRectangle({
-     x: boxX,
-     y: boxY,
-     width: contentWidth,
-     height: boxHeight,
-     borderColor: rgb(0, 0, 0),
-     borderWidth: 1,
-   });
+    // Calcular la altura total del bloque de texto
+    const lineHeight = 14; // Ajustar según sea necesario
+    const boxHeight = allLines.length * lineHeight + 20; // Añadir margen interno
 
-   // Dibujar el texto dentro del rectángulo
-   let currentY = boxY + boxHeight - 15;
-   allLines.forEach(line => {
-     page.drawText(line, {
-       x: boxX + 10, // Un pequeño margen dentro del rectángulo
-       y: currentY,
-       size: fontSize,
-       font: regularFont,
-       color: rgb(0, 0, 0),
-       lineHeight: lineHeight,
-     });
-     currentY -= lineHeight; // Mover la posición Y hacia abajo para la siguiente línea
-   });
+    const boxX = margin;
+    const boxY = 550 - boxHeight; // Ajustar la posición Y según sea necesario
+
+    // Dibujar el rectángulo
+    page.drawRectangle({
+      x: boxX,
+      y: boxY,
+      width: contentWidth,
+      height: boxHeight,
+      borderColor: rgb(0, 0, 0),
+      borderWidth: 1,
+    });
+
+    // Dibujar el texto dentro del rectángulo
+    let currentY = boxY + boxHeight - 15;
+    allLines.forEach((line) => {
+      page.drawText(line, {
+        x: boxX + 10, // Un pequeño margen dentro del rectángulo
+        y: currentY,
+        size: fontSize,
+        font: regularFont,
+        color: rgb(0, 0, 0),
+        lineHeight: lineHeight,
+      });
+      currentY -= lineHeight; // Mover la posición Y hacia abajo para la siguiente línea
+    });
     // currentY -= 30;
     // page.drawText(`Folios: ${folios}`, {
     //   x: margin,
