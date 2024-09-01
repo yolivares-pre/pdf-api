@@ -206,7 +206,10 @@ app.post("/api/create-pdf", async (req, res) => {
 
     // Configurar la respuesta para descargar el archivo
     res.setHeader("Content-Type", "application/pdf");
-    res.setHeader("Content-Disposition", 'attachment; filename="reporte.pdf"');
+    res.setHeader(
+      "Content-Disposition",
+      `attachment; filename="${region}_${mes}.pdf"`
+    );
     res.send(pdfBytes);
   } catch (error) {
     console.error("Error al generar el PDF:", error);
@@ -214,7 +217,5 @@ app.post("/api/create-pdf", async (req, res) => {
   }
 });
 
-const port = 3000;
-app.listen(port, () => {
-  console.log(`Server running on http://localhost:${port}`);
-});
+// Exportar la aplicación para Vercel
+export default app;
