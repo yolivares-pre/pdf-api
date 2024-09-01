@@ -3,6 +3,7 @@ import express from "express";
 import { PDFDocument, rgb, StandardFonts } from "pdf-lib";
 import fs from "fs";
 import fontkit from "@pdf-lib/fontkit"; // Importa fontkit
+import { loadFonts } from "./utils/fonts.js";
 
 const app = express();
 
@@ -59,20 +60,10 @@ app.post("/api/create-pdf", async (req, res) => {
 
     const page = pdfDoc.addPage([595, 842]); // Tamaño A4
     const margin = 50;
-    const contentWidth = page.getWidth() - 2 * margin;
+    const contentWidth = page.getWidth() - 2 * margin; // 495 de espacio disponible
 
-    // Cargar y embeber las fuentes
-    const boldFontBytes = fs.readFileSync("./assets/fonts/gobCL_Bold.otf");
-    const heavyFontBytes = fs.readFileSync("./assets/fonts/gobCL_Heavy.otf");
-    const lightFontBytes = fs.readFileSync("./assets/fonts/gobCL_Light.otf");
-    const regularFontBytes = fs.readFileSync(
-      "./assets/fonts/gobCL_Regular.otf"
-    );
-
-    const boldFont = await pdfDoc.embedFont(boldFontBytes);
-    const heavyFont = await pdfDoc.embedFont(heavyFontBytes);
-    const lightFont = await pdfDoc.embedFont(lightFontBytes);
-    const regularFont = await pdfDoc.embedFont(regularFontBytes);
+    // Cargar y embeber las fuentes usando la función modularizada
+    const { boldFont, heavyFont, lightFont, regularFont } = await loadFonts(pdfDoc);
 
     const baseFont = regularFont;
     const fontSize = 12;
