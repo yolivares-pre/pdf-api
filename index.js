@@ -80,7 +80,7 @@ app.post("/api/create-pdf", async (req, res) => {
 
     // Definir la fuente básica como regular
     const baseFont = regularFont;
-    const fontSize = 24;
+    const fontSize = 12;
 
     // Cargar la imagen desde el sistema de archivos
     const bicolor_line = "./assets/bicolor_line.png"; // Ruta a la imagen Bicolor
@@ -114,7 +114,7 @@ app.post("/api/create-pdf", async (req, res) => {
     // TEXTOS
 
     // Título y encabezado correctamente centrados
-    const title = `Informe técnico ${mes}`;
+    const title = `Informe técnico ${mes.toLowerCase()}`;
     const subtitle = `Región de ${region}`;
 
     // Asegúrate de calcular el ancho del texto con el mismo tamaño de fuente que usarás para dibujar
@@ -123,7 +123,7 @@ app.post("/api/create-pdf", async (req, res) => {
 
     // Centrar el título usando la fuente en negrita
     page.drawText(title, {
-      x: (page.getWidth() - titleWidth) / 2, // Calcular x correctamente para centrar
+      x: (page.getWidth() - titleWidth ) / 2, // Calcular x correctamente para centrar
       y: 700, // Posición y fija
       size: fontSize + 4,
       font: boldFont, // Usar la fuente en negrita
