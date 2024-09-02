@@ -61,6 +61,7 @@ app.post("/api/create-pdf", async (req, res) => {
 
     const page = pdfDoc.addPage([595, 842]); // Tamaño A4
     const margin = 50;
+    const bottomMargin = 40; // Ajusta según tus necesidades
     const contentWidth = page.getWidth() - 2 * margin; // 495 de espacio disponible
     const pageHeight = page.getHeight();
 
@@ -189,9 +190,6 @@ app.post("/api/create-pdf", async (req, res) => {
       font: lightFont,
       color: rgb(0, 0, 0),
     });
-
-    // Altura total de la tabla
-    const tableHeight = dataGeneralBenefiaries.length * rowHeightGeneral;
 
     /* SUPERVISIONS DETAILS */
     // About workers
