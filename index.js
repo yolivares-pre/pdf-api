@@ -1,8 +1,14 @@
 import express from "express";
 import { PDFDocument, rgb } from "pdf-lib";
 import fontkit from "@pdf-lib/fontkit";
-import { loadFonts } from "./utils/fonts.js";
+import path from "path"; // Importar path para manejar rutas absolutas
+import fs from "fs";
 import { loadAndEmbedImage, drawImage } from "./utils/images.js";
+import { fileURLToPath } from 'url';
+
+// Define __filename y __dirname para ES Modules
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 const app = express();
 
@@ -55,6 +61,30 @@ app.post("/api/create-pdf", async (req, res) => {
     const pdfDoc = await PDFDocument.create();
     pdfDoc.registerFontkit(fontkit);
 
+    // Ajuste de rutas absolutas con __dirname y path.join
+    const assetsPath = path.join(__dirname, "assets");
+    const fontsPath = path.join(assetsPath, "fonts");
+    const imagesPath = path.join(assetsPath);
+
+    // Cargar fuentes utilizando rutas absolutas
+    const loadFonts = async (pdfDoc) => {
+      const boldFontBytes = fs.readFileSync(
+        path.join(fontsPath, "gobCL_Bold.otf")
+      );
+      const lightFontBytes = fs.readFileSync(
+        path.join(fontsPath, "gobCL_Light.otf")
+      );
+      const regularFontBytes = fs.readFileSync(
+        path.join(fontsPath, "gobCL_Regular.otf")
+      );
+
+      const boldFont = await pdfDoc.embedFont(boldFontBytes);
+      const lightFont = await pdfDoc.embedFont(lightFontBytes);
+      const regularFont = await pdfDoc.embedFont(regularFontBytes);
+
+      return { boldFont, lightFont, regularFont };
+    };
+
     const { boldFont, lightFont, regularFont } = await loadFonts(pdfDoc);
     const fontSize = 12;
     const margin = 50; // margen estándar
@@ -66,10 +96,8 @@ app.post("/api/create-pdf", async (req, res) => {
 
     // Función para agregar la línea azul y roja en cada página
     const addHeaderLine = async (page) => {
-      const bicolorImage = await loadAndEmbedImage(
-        pdfDoc,
-        "./assets/bicolor_line.png"
-      );
+      const bicolorImagePath = path.join(imagesPath, "bicolor_line.png");
+      const bicolorImage = await loadAndEmbedImage(pdfDoc, bicolorImagePath);
       drawImage(page, bicolorImage, {
         x: margin,
         y: pageHeight - 7,
@@ -82,7 +110,8 @@ app.post("/api/create-pdf", async (req, res) => {
     await addHeaderLine(page);
 
     // Dibujar logo, título y subtítulo solo en la primera página
-    const logoImage = await loadAndEmbedImage(pdfDoc, "./assets/logo_pic.png");
+    const logoImagePath = path.join(imagesPath, "logo_pic.png");
+    const logoImage = await loadAndEmbedImage(pdfDoc, logoImagePath);
 
     drawImage(page, logoImage, {
       x: margin,
