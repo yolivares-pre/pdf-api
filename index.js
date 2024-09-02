@@ -268,6 +268,37 @@ app.post("/api/create-pdf", async (req, res) => {
         paragraph:
           "Praesent ut ligula non mi varius sagittis. Curabitur euismod nisi est, non condimentum arcu convallis at.",
       },
+      {
+        title: "Título 3",
+        paragraph:
+          "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Vivamus lacinia odio vitae vestibulum vestibulum. Cras venenatis euismod malesuada.",
+      },
+      {
+        title: "Título 4",
+        paragraph:
+          "Praesent ut ligula non mi varius sagittis. Curabitur euismod nisi est, non condimentum arcu convallis at.",
+      },
+      {
+        title: "Título 5",
+        paragraph:
+          "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Vivamus lacinia odio vitae vestibulum vestibulum. Cras venenatis euismod malesuada.",
+      },
+      {
+        title: "Título 6",
+        paragraph:
+          "Praesent ut ligula non mi varius sagittis. Curabitur euismod nisi est, non condimentum arcu convallis at.",
+      },
+      {
+        title: "Título 7",
+        paragraph:
+          "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Vivamus lacinia odio vitae vestibulum vestibulum. Cras venenatis euismod malesuada. Praesent ut ligula non mi varius sagittis. Curabitur euismod nisi est, non condimentum arcu convallis at.",
+      },
+      {
+        title: "Título 8",
+        paragraph:
+          "Praesent ut ligula non mi varius sagittis. Curabitur euismod nisi est, non condimentum arcu convallis at. Lorem ipsum dolor sit amet, consectetur adipiscing elit. Vivamus lacinia odio vitae vestibulum vestibulum. Cras venenatis euismod malesuada.",
+      },
+
       // Agregar más secciones según sea necesario...
     ];
 
