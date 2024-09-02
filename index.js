@@ -188,6 +188,79 @@ app.post("/api/create-pdf", async (req, res) => {
 
     currentY -= fontSize + 16; // -> 478
 
+    const supervisionesComparativo = [142, 89, 175, 113, 196, 134]; // Ejemplo de valores
+
+    // Añadir el título del gráfico
+    const chartTitle =
+      "Evolución de supervisiones reportadas del último semestre móvil";
+    page.drawText(chartTitle, {
+      x: margin,
+      y: currentY,
+      size: fontSize + 1,
+      font: boldFont,
+      color: rgb(0.0588, 0.4118, 0.7686),
+    });
+
+    currentY -= fontSize; // Ajustar currentY después del título del gráfico
+
+    // Generar gráfico de barras usando QuickChart.io con valores sobre las barras
+    const chartConfig = {
+      type: "bar",
+      data: {
+        labels: ["Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio"],
+        datasets: [
+          {
+            label: "Supervisiones",
+            data: supervisionesComparativo, // Datos de los últimos 6 meses
+            backgroundColor: "rgba(15, 105, 196, 0.8)",
+          },
+        ],
+      },
+      options: {
+        scales: {
+          y: {
+            beginAtZero: true,
+          },
+        },
+        plugins: {
+          datalabels: {
+            anchor: "end",
+            align: "top",
+            color: "#000000",
+            font: {
+              weight: "bold",
+            },
+          },
+        },
+      },
+      plugins: ["chartjs-plugin-datalabels"], // Añadir plugin para etiquetas de datos
+    };
+
+    const chartUrl = `https://quickchart.io/chart?c=${encodeURIComponent(
+      JSON.stringify(chartConfig)
+    )}`;
+
+    const chartImageBytes = await fetch(chartUrl).then((res) =>
+      res.arrayBuffer()
+    );
+    const chartImage = await pdfDoc.embedPng(chartImageBytes);
+
+    const chartWidth = 400;
+    const chartHeight = 200;
+
+    // Calcular la posición X para centrar el gráfico horizontalmente
+    const chartX = (pageWidth - chartWidth) / 2;
+
+    // Dibujar gráfico de barras centrado horizontalmente
+    page.drawImage(chartImage, {
+      x: chartX,
+      y: currentY - chartHeight - 10, // Añadir un margen pequeño
+      width: chartWidth,
+      height: chartHeight,
+    });
+
+    currentY -= chartHeight + 35; // Ajustar currentY después del gráfico
+
     // Nueva función para dibujar secciones con títulos y párrafos
     const drawSection = (title, paragraph) => {
       // Dibujar título
