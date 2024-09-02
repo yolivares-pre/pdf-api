@@ -1,6 +1,6 @@
 // index.js
 import express from "express";
-import { PDFDocument, rgb } from "pdf-lib";
+import { PDFDocument, rgb, StandardFonts } from "pdf-lib";
 import fs from "fs";
 import fontkit from "@pdf-lib/fontkit"; // Importa fontkit
 import { loadFonts } from "./utils/fonts.js";
