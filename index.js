@@ -1,16 +1,19 @@
 import express from "express";
 import { PDFDocument, rgb } from "pdf-lib";
 import fontkit from "@pdf-lib/fontkit";
-import path from "path"; // Importar path para manejar rutas absolutas
+import path from "path";
 import fs from "fs";
 import { loadAndEmbedImage, drawImage } from "./utils/images.js";
 import { fileURLToPath } from 'url';
+import cors from 'cors'; // Importar el paquete cors
 
 // Define __filename y __dirname para ES Modules
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 const app = express();
+
+app.use(cors()); // Usar cors para permitir peticiones desde cualquier URL
 
 app.use((req, res, next) => {
   res.setHeader("Access-Control-Allow-Origin", "*");
@@ -61,12 +64,10 @@ app.post("/api/create-pdf", async (req, res) => {
     const pdfDoc = await PDFDocument.create();
     pdfDoc.registerFontkit(fontkit);
 
-    // Ajuste de rutas absolutas con __dirname y path.join
     const assetsPath = path.join(__dirname, "assets");
     const fontsPath = path.join(assetsPath, "fonts");
     const imagesPath = path.join(assetsPath);
 
-    // Cargar fuentes utilizando rutas absolutas
     const loadFonts = async (pdfDoc) => {
       const boldFontBytes = fs.readFileSync(
         path.join(fontsPath, "gobCL_Bold.otf")
@@ -87,14 +88,13 @@ app.post("/api/create-pdf", async (req, res) => {
 
     const { boldFont, lightFont, regularFont } = await loadFonts(pdfDoc);
     const fontSize = 12;
-    const margin = 50; // margen estándar
-    const bottomMargin = 50; // margen inferior
-    const topMargin = 50; // margen superior para páginas subsecuentes
+    const margin = 50;
+    const bottomMargin = 50;
+    const topMargin = 50;
     const pageHeight = 842;
     const pageWidth = 595;
     const contentWidth = pageWidth - 2 * margin;
 
-    // Función para agregar la línea azul y roja en cada página
     const addHeaderLine = async (page) => {
       const bicolorImagePath = path.join(imagesPath, "bicolor_line.png");
       const bicolorImage = await loadAndEmbedImage(pdfDoc, bicolorImagePath);
@@ -109,7 +109,6 @@ app.post("/api/create-pdf", async (req, res) => {
     let page = pdfDoc.addPage([pageWidth, pageHeight]);
     await addHeaderLine(page);
 
-    // Dibujar logo, título y subtítulo solo en la primera página
     const logoImagePath = path.join(imagesPath, "logo_pic.png");
     const logoImage = await loadAndEmbedImage(pdfDoc, logoImagePath);
 
@@ -142,9 +141,8 @@ app.post("/api/create-pdf", async (req, res) => {
       color: rgb(0.0588, 0.4118, 0.7686),
     });
 
-    let currentY = pageHeight - 172; // Iniciar justo debajo del subtítulo
+    let currentY = pageHeight - 172;
 
-    // Dibujar "Datos generales del mes"
     page.drawText("Datos generales del mes", {
       x: margin,
       y: currentY,
@@ -154,7 +152,6 @@ app.post("/api/create-pdf", async (req, res) => {
     });
     currentY -= fontSize;
 
-    // Datos para la tabla
     const dataGeneralBeneficiaries = [
       ["Beneficiarias/os activas/os", `${encontradas}`],
       ["Beneficiarias/os no activas/os", `${ausentes}`],
@@ -165,13 +162,11 @@ app.post("/api/create-pdf", async (req, res) => {
       ["Total supervisiones", "100"],
     ];
 
-    // Posiciones iniciales para la tabla
     let startXGeneral = margin;
     let startYGeneral = currentY;
     const rowHeightGeneral = 20;
     const colWidthsGeneral = [395, 100];
 
-    // Dibujar las filas de la tabla
     dataGeneralBeneficiaries.forEach((row, rowIndex) => {
       row.forEach((cellText, colIndex) => {
         page.drawRectangle({
@@ -204,7 +199,6 @@ app.post("/api/create-pdf", async (req, res) => {
     currentY =
       startYGeneral - rowHeightGeneral * dataGeneralBeneficiaries.length - 12;
 
-    // Dibujar la nota debajo de la tabla
     const note = `Listado detallado de trabajadoras/es y fiscalizaciones disponible en este link. (Sólo disponible en versión digital de este archivo).`;
 
     page.drawText(note, {
@@ -215,11 +209,10 @@ app.post("/api/create-pdf", async (req, res) => {
       color: rgb(0, 0, 0),
     });
 
-    currentY -= fontSize + 16; // -> 478
+    currentY -= fontSize + 16;
 
-    const supervisionesComparativo = [142, 89, 175, 113, 196, 134]; // Ejemplo de valores
+    const supervisionesComparativo = [142, 89, 175, 113, 196, 134];
 
-    // Añadir el título del gráfico
     const chartTitle =
       "Evolución de supervisiones reportadas del último semestre móvil";
     page.drawText(chartTitle, {
@@ -230,9 +223,8 @@ app.post("/api/create-pdf", async (req, res) => {
       color: rgb(0.0588, 0.4118, 0.7686),
     });
 
-    currentY -= fontSize; // Ajustar currentY después del título del gráfico
+    currentY -= fontSize;
 
-    // Generar gráfico de barras usando QuickChart.io con valores sobre las barras
     const chartConfig = {
       type: "bar",
       data: {
@@ -240,7 +232,7 @@ app.post("/api/create-pdf", async (req, res) => {
         datasets: [
           {
             label: "Supervisiones",
-            data: supervisionesComparativo, // Datos de los últimos 6 meses
+            data: supervisionesComparativo,
             backgroundColor: "rgba(15, 105, 196, 0.8)",
           },
         ],
@@ -262,7 +254,7 @@ app.post("/api/create-pdf", async (req, res) => {
           },
         },
       },
-      plugins: ["chartjs-plugin-datalabels"], // Añadir plugin para etiquetas de datos
+      plugins: ["chartjs-plugin-datalabels"],
     };
 
     const chartUrl = `https://quickchart.io/chart?c=${encodeURIComponent(
@@ -277,22 +269,18 @@ app.post("/api/create-pdf", async (req, res) => {
     const chartWidth = 400;
     const chartHeight = 200;
 
-    // Calcular la posición X para centrar el gráfico horizontalmente
     const chartX = (pageWidth - chartWidth) / 2;
 
-    // Dibujar gráfico de barras centrado horizontalmente
     page.drawImage(chartImage, {
       x: chartX,
-      y: currentY - chartHeight - 10, // Añadir un margen pequeño
+      y: currentY - chartHeight - 10,
       width: chartWidth,
       height: chartHeight,
     });
 
-    currentY -= chartHeight + 35; // Ajustar currentY después del gráfico
+    currentY -= chartHeight + 35;
 
-    // Nueva función para dibujar secciones con títulos y párrafos
     const drawSection = (title, paragraph) => {
-      // Dibujar título
       checkPageSpace(fontSize + 12);
       page.drawText(title, {
         x: margin,
@@ -302,9 +290,8 @@ app.post("/api/create-pdf", async (req, res) => {
         color: rgb(0.0588, 0.4118, 0.7686),
       });
 
-      currentY -= fontSize + 3; // Ajuste después del título
+      currentY -= fontSize + 3;
 
-      // Dibujar párrafo
       const lines = splitTextIntoLines(
         paragraph,
         contentWidth,
@@ -323,8 +310,7 @@ app.post("/api/create-pdf", async (req, res) => {
         currentY -= fontSize + 4;
       });
 
-      // Añadir separación adicional entre secciones
-      currentY -= 10; // Ajusta el valor según el espacio deseado entre secciones
+      currentY -= 10;
     };
 
     const checkPageSpace = (requiredSpace) => {
@@ -358,7 +344,6 @@ app.post("/api/create-pdf", async (req, res) => {
       return lines;
     };
 
-    // Ejemplo de títulos y párrafos
     const sections = [
       {
         title: "Título 1",
@@ -400,8 +385,6 @@ app.post("/api/create-pdf", async (req, res) => {
         paragraph:
           "Praesent ut ligula non mi varius sagittis. Curabitur euismod nisi est, non condimentum arcu convallis at. Lorem ipsum dolor sit amet, consectetur adipiscing elit. Vivamus lacinia odio vitae vestibulum vestibulum. Cras venenatis euismod malesuada.",
       },
-
-      // Agregar más secciones según sea necesario...
     ];
 
     sections.forEach(({ title, paragraph }) => {
