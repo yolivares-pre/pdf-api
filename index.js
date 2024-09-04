@@ -4,61 +4,115 @@ import fontkit from "@pdf-lib/fontkit";
 import path from "path";
 import fs from "fs";
 import { loadAndEmbedImage, drawImage } from "./utils/images.js";
-import { fileURLToPath } from 'url';
-import cors from 'cors'; // Importar el paquete cors
+import { fileURLToPath } from "url";
+import cors from "cors";
+import dotenv from "dotenv";
 
-// Define __filename y __dirname para ES Modules
+dotenv.config();
+
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 const app = express();
-
-app.use(cors()); // Usar cors para permitir peticiones desde cualquier URL
-
-app.use((req, res, next) => {
-  res.setHeader("Access-Control-Allow-Origin", "*");
-  res.setHeader("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
-  res.setHeader("Access-Control-Allow-Headers", "Content-Type");
-  next();
-});
-
+app.use(cors());
 app.use(express.json());
+
+const loadFonts = async (pdfDoc, fontsPath) => {
+  try {
+    const boldFontBytes = fs.readFileSync(
+      path.join(fontsPath, "gobCL_Bold.otf")
+    );
+    const lightFontBytes = fs.readFileSync(
+      path.join(fontsPath, "gobCL_Light.otf")
+    );
+    const regularFontBytes = fs.readFileSync(
+      path.join(fontsPath, "gobCL_Regular.otf")
+    );
+
+    const boldFont = await pdfDoc.embedFont(boldFontBytes);
+    const lightFont = await pdfDoc.embedFont(lightFontBytes);
+    const regularFont = await pdfDoc.embedFont(regularFontBytes);
+
+    return { boldFont, lightFont, regularFont };
+  } catch (error) {
+    throw new Error("Error loading fonts: " + error.message);
+  }
+};
+
+const addHeaderLine = async (pdfDoc, page, imagesPath, margin, pageHeight) => {
+  try {
+    const bicolorImagePath = path.join(imagesPath, "bicolor_line.png");
+    const bicolorImage = await loadAndEmbedImage(pdfDoc, bicolorImagePath);
+    drawImage(page, bicolorImage, {
+      x: margin,
+      y: pageHeight - 7,
+      width: 104,
+      height: 7,
+    });
+  } catch (error) {
+    throw new Error("Error adding header line: " + error.message);
+  }
+};
+
+const validateRequestBody = (body) => {
+  const requiredFields = [
+    "mes",
+    "ejecutora",
+    "folios",
+    "region",
+    "decreto",
+    "encontradas",
+    "ausentes",
+    "renuncias",
+    "fallecidos",
+    "fiscalizados",
+    "total",
+    "epp",
+    "eppObserva",
+    "usoEpp",
+    "usoEppObserva",
+    "libroAsistencia",
+    "libroAsistenciaObserva",
+    "jornadaCorrecta",
+    "jornadaCorrectaObserva",
+    "condicionesOptimas",
+    "condicionesOptimasObserva",
+    "laboresContrato",
+    "laboresContratoObserva",
+    "capacitacion",
+    "capacitacionObserva",
+    "remuneracion",
+    "remuneracionObserva",
+    "listado",
+    "comentariosFiscalizacion",
+    "comentariosGenerales",
+    "firmante",
+    "cargo",
+  ];
+  for (const field of requiredFields) {
+    if (!body.hasOwnProperty(field)) {
+      throw new Error(`Missing required field: ${field}`);
+    }
+  }
+};
+
+const removeAccents = (str) => {
+  return str.normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-zA-Z0-9_]/g, '_');
+};
 
 app.post("/api/create-pdf", async (req, res) => {
   try {
+    validateRequestBody(req.body);
+
     const {
       mes,
-      ejecutora,
-      folios,
       region,
-      decreto,
       encontradas,
       ausentes,
       renuncias,
-      fallecidos,
       fiscalizados,
-      total,
-      epp,
-      eppObserva,
-      usoEpp,
-      usoEppObserva,
-      libroAsistencia,
-      libroAsistenciaObserva,
-      jornadaCorrecta,
-      jornadaCorrectaObserva,
-      condicionesOptimas,
-      condicionesOptimasObserva,
-      laboresContrato,
-      laboresContratoObserva,
-      capacitacion,
-      capacitacionObserva,
-      remuneracion,
-      remuneracionObserva,
-      listado,
-      comentariosFiscalizacion,
-      comentariosGenerales,
-      firmante,
-      cargo,
+      fallecidos,
+      // otros campos
     } = req.body;
 
     const pdfDoc = await PDFDocument.create();
@@ -68,25 +122,11 @@ app.post("/api/create-pdf", async (req, res) => {
     const fontsPath = path.join(assetsPath, "fonts");
     const imagesPath = path.join(assetsPath);
 
-    const loadFonts = async (pdfDoc) => {
-      const boldFontBytes = fs.readFileSync(
-        path.join(fontsPath, "gobCL_Bold.otf")
-      );
-      const lightFontBytes = fs.readFileSync(
-        path.join(fontsPath, "gobCL_Light.otf")
-      );
-      const regularFontBytes = fs.readFileSync(
-        path.join(fontsPath, "gobCL_Regular.otf")
-      );
+    const { boldFont, lightFont, regularFont } = await loadFonts(
+      pdfDoc,
+      fontsPath
+    );
 
-      const boldFont = await pdfDoc.embedFont(boldFontBytes);
-      const lightFont = await pdfDoc.embedFont(lightFontBytes);
-      const regularFont = await pdfDoc.embedFont(regularFontBytes);
-
-      return { boldFont, lightFont, regularFont };
-    };
-
-    const { boldFont, lightFont, regularFont } = await loadFonts(pdfDoc);
     const fontSize = 12;
     const margin = 50;
     const bottomMargin = 50;
@@ -95,19 +135,8 @@ app.post("/api/create-pdf", async (req, res) => {
     const pageWidth = 595;
     const contentWidth = pageWidth - 2 * margin;
 
-    const addHeaderLine = async (page) => {
-      const bicolorImagePath = path.join(imagesPath, "bicolor_line.png");
-      const bicolorImage = await loadAndEmbedImage(pdfDoc, bicolorImagePath);
-      drawImage(page, bicolorImage, {
-        x: margin,
-        y: pageHeight - 7,
-        width: 104,
-        height: 7,
-      });
-    };
-
     let page = pdfDoc.addPage([pageWidth, pageHeight]);
-    await addHeaderLine(page);
+    await addHeaderLine(pdfDoc, page, imagesPath, margin, pageHeight);
 
     const logoImagePath = path.join(imagesPath, "logo_pic.png");
     const logoImage = await loadAndEmbedImage(pdfDoc, logoImagePath);
@@ -316,7 +345,7 @@ app.post("/api/create-pdf", async (req, res) => {
     const checkPageSpace = (requiredSpace) => {
       if (currentY - requiredSpace < bottomMargin) {
         page = pdfDoc.addPage([pageWidth, pageHeight]);
-        addHeaderLine(page);
+        addHeaderLine(pdfDoc, page, imagesPath, margin, pageHeight);
         currentY = pageHeight - topMargin;
       }
     };
@@ -395,7 +424,7 @@ app.post("/api/create-pdf", async (req, res) => {
     res.setHeader("Content-Type", "application/pdf");
     res.setHeader(
       "Content-Disposition",
-      `attachment; filename="${region}_${mes}.pdf"`
+      `attachment; filename="${removeAccents(region)}_${mes}.pdf"`
     );
     res.end(pdfBytes);
   } catch (error) {
