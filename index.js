@@ -2,11 +2,13 @@ import express from "express";
 import { PDFDocument, rgb } from "pdf-lib";
 import fontkit from "@pdf-lib/fontkit";
 import path from "path";
-import fs from "fs";
-import { loadAndEmbedImage, drawImage } from "./utils/images.js";
-import { fileURLToPath } from "url";
 import cors from "cors";
 import dotenv from "dotenv";
+import { loadFonts } from "./utils/loadFonts.js";
+import { addHeaderLine } from "./utils/addHeaderLine.js";
+import { validateRequestBody, removeAccents } from "./utils/validation.js";
+import { fileURLToPath } from "url";
+import { loadAndEmbedImage, drawImage } from "./utils/images.js";
 
 dotenv.config();
 
@@ -16,89 +18,6 @@ const __dirname = path.dirname(__filename);
 const app = express();
 app.use(cors());
 app.use(express.json());
-
-const loadFonts = async (pdfDoc, fontsPath) => {
-  try {
-    const boldFontBytes = fs.readFileSync(
-      path.join(fontsPath, "gobCL_Bold.otf")
-    );
-    const lightFontBytes = fs.readFileSync(
-      path.join(fontsPath, "gobCL_Light.otf")
-    );
-    const regularFontBytes = fs.readFileSync(
-      path.join(fontsPath, "gobCL_Regular.otf")
-    );
-
-    const boldFont = await pdfDoc.embedFont(boldFontBytes);
-    const lightFont = await pdfDoc.embedFont(lightFontBytes);
-    const regularFont = await pdfDoc.embedFont(regularFontBytes);
-
-    return { boldFont, lightFont, regularFont };
-  } catch (error) {
-    throw new Error("Error loading fonts: " + error.message);
-  }
-};
-
-const addHeaderLine = async (pdfDoc, page, imagesPath, margin, pageHeight) => {
-  try {
-    const bicolorImagePath = path.join(imagesPath, "bicolor_line.png");
-    const bicolorImage = await loadAndEmbedImage(pdfDoc, bicolorImagePath);
-    drawImage(page, bicolorImage, {
-      x: margin,
-      y: pageHeight - 7,
-      width: 104,
-      height: 7,
-    });
-  } catch (error) {
-    throw new Error("Error adding header line: " + error.message);
-  }
-};
-
-const validateRequestBody = (body) => {
-  const requiredFields = [
-    "mes",
-    "ejecutora",
-    "folios",
-    "region",
-    "decreto",
-    "encontradas",
-    "ausentes",
-    "renuncias",
-    "fallecidos",
-    "fiscalizados",
-    "total",
-    "epp",
-    "eppObserva",
-    "usoEpp",
-    "usoEppObserva",
-    "libroAsistencia",
-    "libroAsistenciaObserva",
-    "jornadaCorrecta",
-    "jornadaCorrectaObserva",
-    "condicionesOptimas",
-    "condicionesOptimasObserva",
-    "laboresContrato",
-    "laboresContratoObserva",
-    "capacitacion",
-    "capacitacionObserva",
-    "remuneracion",
-    "remuneracionObserva",
-    "listado",
-    "comentariosFiscalizacion",
-    "comentariosGenerales",
-    "firmante",
-    "cargo",
-  ];
-  for (const field of requiredFields) {
-    if (!body.hasOwnProperty(field)) {
-      throw new Error(`Missing required field: ${field}`);
-    }
-  }
-};
-
-const removeAccents = (str) => {
-  return str.normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-zA-Z0-9_]/g, '_');
-};
 
 app.post("/api/create-pdf", async (req, res) => {
   try {
@@ -378,41 +297,6 @@ app.post("/api/create-pdf", async (req, res) => {
         title: "Título 1",
         paragraph:
           "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Vivamus lacinia odio vitae vestibulum vestibulum. Cras venenatis euismod malesuada.",
-      },
-      {
-        title: "Título 2",
-        paragraph:
-          "Praesent ut ligula non mi varius sagittis. Curabitur euismod nisi est, non condimentum arcu convallis at.",
-      },
-      {
-        title: "Título 3",
-        paragraph:
-          "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Vivamus lacinia odio vitae vestibulum vestibulum. Cras venenatis euismod malesuada.",
-      },
-      {
-        title: "Título 4",
-        paragraph:
-          "Praesent ut ligula non mi varius sagittis. Curabitur euismod nisi est, non condimentum arcu convallis at.",
-      },
-      {
-        title: "Título 5",
-        paragraph:
-          "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Vivamus lacinia odio vitae vestibulum vestibulum. Cras venenatis euismod malesuada.",
-      },
-      {
-        title: "Título 6",
-        paragraph:
-          "Praesent ut ligula non mi varius sagittis. Curabitur euismod nisi est, non condimentum arcu convallis at.",
-      },
-      {
-        title: "Título 7",
-        paragraph:
-          "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Vivamus lacinia odio vitae vestibulum vestibulum. Cras venenatis euismod malesuada. Praesent ut ligula non mi varius sagittis. Curabitur euismod nisi est, non condimentum arcu convallis at.",
-      },
-      {
-        title: "Título 8",
-        paragraph:
-          "Praesent ut ligula non mi varius sagittis. Curabitur euismod nisi est, non condimentum arcu convallis at. Lorem ipsum dolor sit amet, consectetur adipiscing elit. Vivamus lacinia odio vitae vestibulum vestibulum. Cras venenatis euismod malesuada.",
       },
     ];
 
