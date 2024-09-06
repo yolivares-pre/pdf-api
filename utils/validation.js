@@ -8,10 +8,7 @@
 export const validateRequestBody = (body) => {
   const requiredFields = [
     "mes",
-    "ejecutora",
-    "folios",
     "region",
-    "decreto",
     "encontradas",
     "ausentes",
     "renuncias",

@@ -23,15 +23,77 @@ app.post("/api/create-pdf", async (req, res) => {
   try {
     validateRequestBody(req.body);
 
+    // Define helper functions within the scope
+    const checkPageSpace = (requiredSpace) => {
+      if (currentY - requiredSpace < bottomMargin) {
+        page = pdfDoc.addPage([pageWidth, pageHeight]);
+        addHeaderLine(pdfDoc, page, imagesPath, margin, pageHeight);
+        currentY = pageHeight - topMargin;
+      }
+    };
+
+    const splitTextIntoLines = (text, maxWidth, font, size) => {
+      const words = text.split(" ");
+      const lines = [];
+      let currentLine = "";
+
+      words.forEach((word) => {
+        const testLine = currentLine + (currentLine ? " " : "") + word;
+        const testLineWidth = font.widthOfTextAtSize(testLine, size);
+        if (testLineWidth < maxWidth) {
+          currentLine = testLine;
+        } else {
+          lines.push(currentLine);
+          currentLine = word;
+        }
+      });
+
+      if (currentLine) {
+        lines.push(currentLine);
+      }
+
+      return lines;
+    };
+
     const {
       mes,
       region,
       encontradas,
       ausentes,
       renuncias,
-      fiscalizados,
       fallecidos,
-      // otros campos
+      fiscalizados,
+      desvinculados,
+      total,
+      epp,
+      eppObserva,
+      usoEpp,
+      usoEppObserva,
+      libroAsistencia,
+      libroAsistenciaObserva,
+      jornadaCorrecta,
+      jornadaCorrectaObserva,
+      condicionesOptimas,
+      condicionesOptimasObserva,
+      laboresContrato,
+      laboresContratoObserva,
+      capacitacion,
+      capacitacionObserva,
+      remuneracion,
+      remuneracionObserva,
+      listado,
+      comentariosFiscalizacion,
+      comentariosGenerales,
+      firmante,
+      cargo,
+      otrosMeses = [
+        { mes: 'febrero', supervisiones: 1 },
+        { mes: 'marzo', supervisiones: 1 },
+        { mes: 'abril', supervisiones: 1 },
+        { mes: 'mayo', supervisiones: 1 },
+        { mes: 'junio', supervisiones: 1 },
+        { mes: 'julio', supervisiones: 1 },
+      ],
     } = req.body;
 
     const pdfDoc = await PDFDocument.create();
@@ -104,10 +166,10 @@ app.post("/api/create-pdf", async (req, res) => {
       ["Beneficiarias/os activas/os", `${encontradas}`],
       ["Beneficiarias/os no activas/os", `${ausentes}`],
       ["Beneficiarias/os que renunciaron", `${renuncias}`],
-      ["Beneficiarias/os desvinculadas/os", `${fiscalizados}`],
+      ["Beneficiarias/os desvinculadas/os", `${desvinculados}`],
       ["Beneficiarias/os fallecidas/os", `${fallecidos}`],
-      ["Total beneficiarias/os", "227"],
-      ["Total supervisiones", "100"],
+      ["Total beneficiarias/os", `${total}`],
+      ["Total supervisiones", `${fiscalizados}`],
     ];
 
     let startXGeneral = margin;
@@ -149,6 +211,8 @@ app.post("/api/create-pdf", async (req, res) => {
 
     const note = `Listado detallado de trabajadoras/es y fiscalizaciones disponible en este link. (Sólo disponible en versión digital de este archivo).`;
 
+    // Check for page space before drawing the note
+    checkPageSpace(fontSize + 16);
     page.drawText(note, {
       x: margin,
       y: currentY,
@@ -163,6 +227,9 @@ app.post("/api/create-pdf", async (req, res) => {
 
     const chartTitle =
       "Evolución de supervisiones reportadas del último semestre móvil";
+
+    // Check for page space before drawing the chart title
+    checkPageSpace(fontSize + 16);
     page.drawText(chartTitle, {
       x: margin,
       y: currentY,
@@ -219,6 +286,8 @@ app.post("/api/create-pdf", async (req, res) => {
 
     const chartX = (pageWidth - chartWidth) / 2;
 
+    // Before drawing chart, check for page space
+    checkPageSpace(chartHeight + 35);
     page.drawImage(chartImage, {
       x: chartX,
       y: currentY - chartHeight - 10,
@@ -261,47 +330,109 @@ app.post("/api/create-pdf", async (req, res) => {
       currentY -= 10;
     };
 
-    const checkPageSpace = (requiredSpace) => {
-      if (currentY - requiredSpace < bottomMargin) {
-        page = pdfDoc.addPage([pageWidth, pageHeight]);
-        addHeaderLine(pdfDoc, page, imagesPath, margin, pageHeight);
-        currentY = pageHeight - topMargin;
-      }
-    };
-
-    const splitTextIntoLines = (text, maxWidth, font, size) => {
-      const words = text.split(" ");
-      let lines = [];
-      let currentLine = "";
-
-      words.forEach((word) => {
-        const testLine = currentLine + (currentLine ? " " : "") + word;
-        const testLineWidth = font.widthOfTextAtSize(testLine, size);
-        if (testLineWidth < maxWidth) {
-          currentLine = testLine;
-        } else {
-          lines.push(currentLine);
-          currentLine = word;
-        }
-      });
-
-      if (currentLine) {
-        lines.push(currentLine);
-      }
-
-      return lines;
-    };
-
     const sections = [
       {
-        title: "Título 1",
-        paragraph:
-          "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Vivamus lacinia odio vitae vestibulum vestibulum. Cras venenatis euismod malesuada.",
+        title: `${epp} beneficiarias/os recibieron elementos de protección personal`,
+        paragraph: `${eppObserva}`,
+      },
+      {
+        title: `${usoEpp} beneficiarias/os hicieron uso de los elementos de protección personal`,
+        paragraph: `${usoEppObserva}`,
+      },
+      {
+        title: `${jornadaCorrecta} beneficiarias/os cumplieron correctamente la jornada laboral`,
+        paragraph: `${jornadaCorrectaObserva}`,
+      },
+      {
+        title: `${condicionesOptimas} beneficiarias/os no contaron con condiciones óptimas de trabajo`, 
+        paragraph: `${condicionesOptimasObserva}`,
+      },
+      {
+        title: `${laboresContrato} beneficiarias/os realizaron labores según contrato`,
+        paragraph: `${laboresContratoObserva}`,
+      },
+      {
+        title: `${capacitacion} beneficiarias/os recibieron capacitación sobre prevención de riesgos`,
+        paragraph: `${capacitacionObserva}`,
+      },
+      {
+        title: `${remuneracion} beneficiarias/os recibieron su remuneración en el plazo correspondiente`,
+        paragraph: `${remuneracionObserva}`,
+      },
+      {
+        title: `${libroAsistencia} asistencias fueron registradas en el libro`,
+        paragraph: `${libroAsistenciaObserva}`,
       },
     ];
 
     sections.forEach(({ title, paragraph }) => {
       drawSection(title, paragraph);
+    });
+
+    // Check for page space before adding the general comments section
+    checkPageSpace(fontSize + 16);
+    page.drawText("Comentarios generales de supervisiones", {
+      x: margin,
+      y: currentY,
+      size: fontSize + 1,
+      font: boldFont,
+      color: rgb(0.0588, 0.4118, 0.7686),
+    });
+
+    // Párrafo de comentarios generales de supervisiones
+    currentY -= fontSize + 3;
+
+    const generalCommentsLines = splitTextIntoLines(
+      comentariosGenerales,
+      contentWidth,
+      regularFont,
+      fontSize
+    );
+
+    generalCommentsLines.forEach((line) => {
+      checkPageSpace(fontSize + 4);
+      page.drawText(line, {
+        x: margin,
+        y: currentY,
+        size: fontSize,
+        font: regularFont,
+        color: rgb(0, 0, 0),
+      });
+      currentY -= fontSize + 4;
+    });
+
+    currentY -= fontSize + 16;
+
+    // Check for page space before adding the comment section
+    checkPageSpace(fontSize + 16);
+    page.drawText("Avances del proyecto y acciones de gestión desarrolladas", {
+      x: margin,
+      y: currentY,
+      size: fontSize + 1,
+      font: boldFont,
+      color: rgb(0.0588, 0.4118, 0.7686),
+    });
+
+    // Párrafo de comentarios de avances del proyecto y acciones de gestión desarrolladas
+    currentY -= fontSize + 3;
+
+    const projectProgressLines = splitTextIntoLines(
+      comentariosFiscalizacion,
+      contentWidth,
+      regularFont,
+      fontSize
+    );
+
+    projectProgressLines.forEach((line) => {
+      checkPageSpace(fontSize + 4);
+      page.drawText(line, {
+        x: margin,
+        y: currentY,
+        size: fontSize,
+        font: regularFont,
+        color: rgb(0, 0, 0),
+      });
+      currentY -= fontSize + 4;
     });
 
     const pdfBytes = await pdfDoc.save();
