@@ -86,14 +86,7 @@ app.post("/api/create-pdf", async (req, res) => {
       comentariosGenerales,
       firmante,
       cargo,
-      otrosMeses = [
-        { mes: 'febrero', supervisiones: 1 },
-        { mes: 'marzo', supervisiones: 1 },
-        { mes: 'abril', supervisiones: 1 },
-        { mes: 'mayo', supervisiones: 1 },
-        { mes: 'junio', supervisiones: 1 },
-        { mes: 'julio', supervisiones: 1 },
-      ],
+      otrosMeses
     } = req.body;
 
     const pdfDoc = await PDFDocument.create();
