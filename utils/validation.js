@@ -29,8 +29,6 @@ export const validateRequestBody = (body) => {
     "laboresContratoObserva",
     "capacitacion",
     "capacitacionObserva",
-    "remuneracion",
-    "remuneracionObserva",
     "listado",
     "comentariosFiscalizacion",
     "comentariosGenerales",
