@@ -19,6 +19,40 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
+const monthNames = [
+  "Enero",
+  "Febrero",
+  "Marzo",
+  "Abril",
+  "Mayo",
+  "Junio",
+  "Julio",
+  "Agosto",
+  "Septiembre",
+  "Octubre",
+  "Noviembre",
+  "Diciembre",
+];
+
+const regionNames = {
+  "01": "Tarapacá",
+  "02": "Antofagasta",
+  "03": "Atacama",
+  "04": "Coquimbo",
+  "05": "Valparaíso",
+  "06": "Libertador Gral. Bernardo O'Higgins",
+  "07": "Maule",
+  "08": "Biobío",
+  "09": "Araucanía",
+  "10": "Los Lagos",
+  "11": "Aysén del General Carlos Ibáñez del Campo",
+  "12": "Magallanes y de la Antártica Chilena",
+ " 13": "Metropolitana de Santiago",
+  "14": "Los Ríos",
+  "15": "Arica y Parinacota",
+  "16": "Ñuble",
+};
+
 app.post("/api/create-pdf", async (req, res) => {
   try {
     validateRequestBody(req.body);
@@ -84,8 +118,12 @@ app.post("/api/create-pdf", async (req, res) => {
       comentariosGenerales,
       firmante,
       cargo,
-      otrosMeses
+      otrosMeses,
     } = req.body;
+
+    // Conversión de mes y región a texto
+    const mesTexto = monthNames[parseInt(mes, 10) - 1]; // Convierte el mes a nombre
+    const regionTexto = regionNames[region] || "Región desconocida"; // Convierte el valor de región a nombre
 
     const pdfDoc = await PDFDocument.create();
     pdfDoc.registerFontkit(fontkit);
@@ -120,8 +158,8 @@ app.post("/api/create-pdf", async (req, res) => {
       height: 47,
     });
 
-    const title = `Informe técnico ${mes.toLowerCase()}`;
-    const subtitle = `Región de ${region}`;
+    const title = `Informe técnico ${mesTexto}`; // Usa mesTexto para el nombre del mes
+    const subtitle = `Región de ${regionTexto}`; // Usa regionTexto para el nombre de la región
 
     const titleWidth = boldFont.widthOfTextAtSize(title, fontSize + 4);
     const subtitleWidth = regularFont.widthOfTextAtSize(subtitle, fontSize + 2);
@@ -214,8 +252,6 @@ app.post("/api/create-pdf", async (req, res) => {
 
     currentY -= fontSize + 16;
 
-    const supervisionesComparativo = [142, 89, 175, 113, 196, 134];
-
     const chartTitle =
       "Evolución de supervisiones reportadas del último semestre móvil";
 
@@ -231,14 +267,22 @@ app.post("/api/create-pdf", async (req, res) => {
 
     currentY -= fontSize;
 
+    // Invertir el orden para mostrar del mes más antiguo al más reciente
+    const labels = otrosMeses
+      .map((monthData) => monthNames[parseInt(monthData.month) - 1])
+      .reverse(); // Invertir el orden de los meses
+
+    const data = otrosMeses.map((monthData) => monthData.total).reverse(); // Invertir el orden de los datos
+
+    // Configuración del gráfico usando los datos de otrosMeses invertidos
     const chartConfig = {
       type: "bar",
       data: {
-        labels: ["Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio"],
+        labels: labels, // Etiquetas en orden inverso
         datasets: [
           {
             label: "Supervisiones",
-            data: supervisionesComparativo,
+            data: data, // Datos en orden inverso
             backgroundColor: "rgba(15, 105, 196, 0.8)",
           },
         ],
@@ -263,10 +307,12 @@ app.post("/api/create-pdf", async (req, res) => {
       plugins: ["chartjs-plugin-datalabels"],
     };
 
+    // Generar la URL del gráfico con la configuración actualizada
     const chartUrl = `https://quickchart.io/chart?c=${encodeURIComponent(
       JSON.stringify(chartConfig)
     )}`;
 
+    // Obtener la imagen del gráfico desde la URL generada
     const chartImageBytes = await fetch(chartUrl).then((res) =>
       res.arrayBuffer()
     );
@@ -277,7 +323,7 @@ app.post("/api/create-pdf", async (req, res) => {
 
     const chartX = (pageWidth - chartWidth) / 2;
 
-    // Before drawing chart, check for page space
+    // Antes de dibujar el gráfico, verifica el espacio en la página
     checkPageSpace(chartHeight + 35);
     page.drawImage(chartImage, {
       x: chartX,
@@ -335,7 +381,7 @@ app.post("/api/create-pdf", async (req, res) => {
         paragraph: `${jornadaCorrectaObserva}`,
       },
       {
-        title: `${condicionesOptimas} beneficiarias/os no contaron con condiciones óptimas de trabajo`, 
+        title: `${condicionesOptimas} beneficiarias/os no contaron con condiciones óptimas de trabajo`,
         paragraph: `${condicionesOptimasObserva}`,
       },
       {
@@ -435,7 +481,7 @@ app.post("/api/create-pdf", async (req, res) => {
   }
 });
 
-const PORT = process.env.PORT || 3000;
+const PORT = process.env.PORT || 3001;
 app.listen(PORT, () => {
   console.log(`Server is running on port ${PORT}`);
 });
