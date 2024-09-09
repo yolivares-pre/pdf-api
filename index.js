@@ -79,8 +79,6 @@ app.post("/api/create-pdf", async (req, res) => {
       laboresContratoObserva,
       capacitacion,
       capacitacionObserva,
-      remuneracion,
-      remuneracionObserva,
       listado,
       comentariosFiscalizacion,
       comentariosGenerales,
@@ -347,10 +345,6 @@ app.post("/api/create-pdf", async (req, res) => {
       {
         title: `${capacitacion} beneficiarias/os recibieron capacitación sobre prevención de riesgos`,
         paragraph: `${capacitacionObserva}`,
-      },
-      {
-        title: `${remuneracion} beneficiarias/os recibieron su remuneración en el plazo correspondiente`,
-        paragraph: `${remuneracionObserva}`,
       },
       {
         title: `${libroAsistencia} asistencias fueron registradas en el libro`,
