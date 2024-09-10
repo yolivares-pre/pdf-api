@@ -44,13 +44,13 @@ const regionNames = {
   "07": "Maule",
   "08": "Biobío",
   "09": "Araucanía",
-  "10": "Los Lagos",
-  "11": "Aysén del General Carlos Ibáñez del Campo",
-  "12": "Magallanes y de la Antártica Chilena",
- " 13": "Metropolitana de Santiago",
-  "14": "Los Ríos",
-  "15": "Arica y Parinacota",
-  "16": "Ñuble",
+  10: "Los Lagos",
+  11: "Aysén del General Carlos Ibáñez del Campo",
+  12: "Magallanes y de la Antártica Chilena",
+  " 13": "Metropolitana de Santiago",
+  14: "Los Ríos",
+  15: "Arica y Parinacota",
+  16: "Ñuble",
 };
 
 app.post("/api/create-pdf", async (req, res) => {
@@ -308,7 +308,7 @@ app.post("/api/create-pdf", async (req, res) => {
     };
 
     // Generar la URL del gráfico con la configuración actualizada
-    const chartUrl = `https://quickchart.io/chart?c=${encodeURIComponent(
+    const chartUrl = `http://quickchart.io/chart?c=${encodeURIComponent(
       JSON.stringify(chartConfig)
     )}`;
 
@@ -467,6 +467,58 @@ app.post("/api/create-pdf", async (req, res) => {
       });
       currentY -= fontSize + 4;
     });
+
+// Función para dibujar la sección de firma centrada horizontalmente con mayor espacio superior
+const drawSignatureSection = (page, firmante, cargo) => {
+  const fontSize = 12;
+  const lineLength = 200; // Longitud de la línea debajo de la firma
+  const pageWidth = page.getWidth();
+
+  // Verifica si hay suficiente espacio, si no, agrega una nueva página
+  checkPageSpace(fontSize + 50); // Ajusta según sea necesario
+
+  // Aumentar el espacio superior 5 veces más
+  const increasedSpace = 30 * 5; // Multiplica el espacio actual por 5
+  const lineY = currentY - increasedSpace; // Ajusta la posición vertical con el nuevo espacio
+  const lineXStart = (pageWidth - lineLength) / 2; // Cálculo para centrar horizontalmente
+
+  // Dibuja la línea centrada horizontalmente
+  page.drawLine({
+    start: { x: lineXStart, y: lineY },
+    end: { x: lineXStart + lineLength, y: lineY },
+    thickness: 1,
+    color: rgb(0, 0, 0),
+  });
+
+  // Anchos de los textos para centrar horizontalmente
+  const firmanteWidth = regularFont.widthOfTextAtSize(firmante, fontSize);
+  const cargoWidth = lightFont.widthOfTextAtSize(cargo, fontSize);
+
+  // Dibuja el texto de firmante centrado horizontalmente
+  page.drawText(firmante, {
+    x: (pageWidth - firmanteWidth) / 2, // Cálculo para centrar el texto horizontalmente
+    y: lineY - 15,
+    size: fontSize,
+    font: regularFont, // Usa la fuente que ya tienes cargada
+    color: rgb(0, 0, 0),
+  });
+
+  // Dibuja el texto de cargo centrado horizontalmente
+  page.drawText(cargo, {
+    x: (pageWidth - cargoWidth) / 2, // Cálculo para centrar el texto horizontalmente
+    y: lineY - 30,
+    size: fontSize,
+    font: lightFont, // Usa la fuente que ya tienes cargada
+    color: rgb(0, 0, 0),
+  });
+
+  // Actualiza currentY para evitar solapamientos en caso de más contenido
+  currentY = lineY - 50;
+};
+
+// Llama a la función justo antes de finalizar la generación del PDF
+drawSignatureSection(page, firmante, cargo);
+
 
     const pdfBytes = await pdfDoc.save();
     res.setHeader("Content-Type", "application/pdf");
