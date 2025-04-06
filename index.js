@@ -38,19 +38,16 @@ app.use(express.json({ limit: "50mb" }));
 
 app.post("/api/create-pdf", async (req, res) => {
   try {
-    // Adaptar el formato antiguo al nuevo si es necesario
-    if (!req.body.datosGenerales) {
-      // Está usando el formato antiguo, vamos a adaptarlo
-      req.body = processMonthlyReportData(req.body);
-    }
+    // Procesar los datos de la solicitud usando la utilidad
+    const processedData = processMonthlyReportData(req.body);
 
-    // Crea un validador personalizado o usa el existente
+    // Validar los datos procesados si la validación está habilitada
     const isValidationEnabled = process.env.ENABLE_VALIDATION === "true";
     if (isValidationEnabled) {
-      validateRequestBody(req.body);
+      validateRequestBody(processedData);
     }
 
-    // Extraer correctamente los datos después de la adaptación
+    // Extraer los datos ya procesados
     const {
       mes,
       region,
@@ -62,7 +59,7 @@ app.post("/api/create-pdf", async (req, res) => {
       otrosMeses = [],
       firmante,
       cargo,
-    } = req.body;
+    } = processedData;
 
     // Extraer los campos de datosGenerales
     const {
@@ -73,7 +70,7 @@ app.post("/api/create-pdf", async (req, res) => {
       fiscalizados = 0,
       desvinculados = 0,
       total = 0,
-    } = datosGenerales || {};
+    } = datosGenerales;
 
     // Conversión de mes y región a texto
     const mesNum = parseInt(mes, 10);
