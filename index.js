@@ -98,7 +98,7 @@ app.post("/api/create-pdf", async (req, res) => {
     const fontSize = 12; //
     const lineSpacing = 5; // Espacio entre líneas explícito
     const margin = 50;
-    const bottomMargin = 30; // Aumentado para evitar cortes
+    const bottomMargin = 20; // Aumentado para evitar cortes
     const topMargin = 70; // Ajustado para los encabezados
     const pageHeight = 842;
     const pageWidth = 595;
@@ -352,6 +352,7 @@ app.post("/api/create-pdf", async (req, res) => {
     }
 
     // Función para dibujar secciones de supervisión con enfoque en personas
+    // Función para dibujar secciones de supervisión con enfoque en personas
     const drawSupervisionsSection = (title, sectionData) => {
       // Verificar espacio suficiente para el título de sección
       checkPageSpace(fontSize * 2 + lineSpacing * 3);
@@ -424,7 +425,8 @@ app.post("/api/create-pdf", async (req, res) => {
         if (sectionData && sectionData.asistencia) {
           Object.keys(sectionData.asistencia).forEach((key) => {
             if (
-              typeof sectionData.asistencia[key] === "boolean" &&
+              (typeof sectionData.asistencia[key] === "boolean" ||
+                typeof sectionData.asistencia[key] === "number") &&
               fieldMappings[key]
             ) {
               fieldsToProcess[key] = {
@@ -439,7 +441,8 @@ app.post("/api/create-pdf", async (req, res) => {
         if (sectionData && sectionData.condicionesTrabajo) {
           Object.keys(sectionData.condicionesTrabajo).forEach((key) => {
             if (
-              typeof sectionData.condicionesTrabajo[key] === "boolean" &&
+              (typeof sectionData.condicionesTrabajo[key] === "boolean" ||
+                typeof sectionData.condicionesTrabajo[key] === "number") &&
               fieldMappings[key]
             ) {
               fieldsToProcess[key] = {
@@ -454,12 +457,14 @@ app.post("/api/create-pdf", async (req, res) => {
         if (
           sectionData &&
           sectionData.supervisionEjecutora &&
-          typeof sectionData.supervisionEjecutora.supervisionEjecutora ===
-            "boolean"
+          (typeof sectionData.supervisionEjecutora.supervisionEjecutora ===
+            "boolean" ||
+            typeof sectionData.supervisionEjecutora.supervisionEjecutora ===
+              "number")
         ) {
           fieldsToProcess["supervisionEjecutora"] = {
             value: sectionData.supervisionEjecutora.supervisionEjecutora,
-            observacion: "",
+            observacion: sectionData.supervisionEjecutora.observaciones || "",
             section: "Supervisión Ejecutora",
           };
         }
@@ -468,7 +473,8 @@ app.post("/api/create-pdf", async (req, res) => {
         if (sectionData && sectionData.requisitos) {
           Object.keys(sectionData.requisitos).forEach((key) => {
             if (
-              typeof sectionData.requisitos[key] === "boolean" &&
+              (typeof sectionData.requisitos[key] === "boolean" ||
+                typeof sectionData.requisitos[key] === "number") &&
               fieldMappings[key]
             ) {
               fieldsToProcess[key] = {
@@ -483,7 +489,8 @@ app.post("/api/create-pdf", async (req, res) => {
         if (sectionData && sectionData.revisionContrato) {
           Object.keys(sectionData.revisionContrato).forEach((key) => {
             if (
-              typeof sectionData.revisionContrato[key] === "boolean" &&
+              (typeof sectionData.revisionContrato[key] === "boolean" ||
+                typeof sectionData.revisionContrato[key] === "number") &&
               fieldMappings[key]
             ) {
               fieldsToProcess[key] = {
@@ -498,7 +505,8 @@ app.post("/api/create-pdf", async (req, res) => {
         if (sectionData && sectionData.obligacionesLaborales) {
           Object.keys(sectionData.obligacionesLaborales).forEach((key) => {
             if (
-              typeof sectionData.obligacionesLaborales[key] === "boolean" &&
+              (typeof sectionData.obligacionesLaborales[key] === "boolean" ||
+                typeof sectionData.obligacionesLaborales[key] === "number") &&
               fieldMappings[key]
             ) {
               fieldsToProcess[key] = {
@@ -540,11 +548,20 @@ app.post("/api/create-pdf", async (req, res) => {
 
         fields.forEach((field) => {
           const { key, value } = field;
+          // Se utiliza el total de beneficiarias/os fiscalizadas de datosGenerales
           const totalPersonas = fiscalizados ? parseInt(fiscalizados, 10) : 100;
-          const cumplieron = value
-            ? Math.round(totalPersonas * 0.75)
-            : Math.round(totalPersonas * 0.25);
-          const noCumplieron = totalPersonas - cumplieron;
+          let cumplieron, noCumplieron;
+          if (typeof value === "number") {
+            // Si el valor es numérico, se usa directamente
+            cumplieron = value;
+            noCumplieron = totalPersonas - value;
+          } else {
+            // Para valores booleanos se aplica la lógica original (75% / 25%)
+            cumplieron = value
+              ? Math.round(totalPersonas * 0.75)
+              : Math.round(totalPersonas * 0.25);
+            noCumplieron = totalPersonas - cumplieron;
+          }
 
           let fieldContentHeight = fontSize * 3 + lineSpacing * 4;
           let observationHeight = 0;
@@ -677,7 +694,7 @@ app.post("/api/create-pdf", async (req, res) => {
           currentY -= lineSpacing * 3;
         });
       });
-    }; // Cierre correcto de la función drawSupervisionsSection
+    };
 
     // Llamar a la función para las secciones
     drawSupervisionsSection("Supervisión en Terreno", supervisionTerreno);

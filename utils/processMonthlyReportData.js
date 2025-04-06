@@ -16,95 +16,119 @@ export function processMonthlyReportData(requestBody) {
       // Los siguientes valores se calculan a partir del agregado de los campos del objeto asistencia
       // del componente supervision-terreno/index.vue, a excepción de los señalados,
       // los cuales deben ser ingresados manualmente por el usuario
-      encontradas: body.encontradas, // Contabiliza asistencia.presencia = true
-      ausentes: body.ausentes, // Contabiliza asistencia.presencia = false
-      renuncias: body.renuncias, // Ingresado por usuario
-      fallecidos: body.fallecidos, // Ingresado por usuario
-      fiscalizados: body.fiscalizados, // Contabiliza los registros en tabla realizados en mes
-      desvinculados: body.desvinculados || 0, // Ingresado por usuario
-      total: body.total, // Corresponde al universo de beneficiarios total en la región.
+      encontradas: Number(body.datosGenerales.encontradas), // Contabiliza asistencia.presencia = true
+      ausentes: Number(body.datosGenerales.ausentes), // Contabiliza asistencia.presencia = false
+      renuncias: Number(body.datosGenerales.renuncias), // Ingresado por usuario
+      fallecidos: Number(body.datosGenerales.fallecidos), // Ingresado por usuario
+      fiscalizados: Number(body.datosGenerales.fiscalizados), // Contabiliza los registros en tabla realizados en mes
+      desvinculados: Number(body.datosGenerales.desvinculados || 0), // Ingresado por usuario
+      total: Number(body.datosGenerales.total), // Corresponde al universo de beneficiarios total en la región.
     },
     supervisionTerreno: {
       // Nuevo campo. Calcula cuántos informes fueron realizados en papel
       // y cuántos en digital. En componente se llama `soportePapel`
-      tipoSoporteTerreno: body.tipoSoporteTerreno,
+      tipoSoporteTerreno: body.supervisionTerreno.tipoSoporteTerreno,
       // Se añaden todos los campos de asistencia, a excepción de `presencia`
       // porque ese valor es relevante y se calcula en tabla de `datosGenerales`.
-      //mantiene nombres del componente supervision-terreno
+      // Mantiene nombres del componente supervision-terreno
       asistencia: {
-        libroAsistencia:
-          body.libroAsistencia === "true" || body.libroAsistencia === true,
-        firmaLibro: body.firmaLibro === "true" || body.firmaLibro === true,
-        horariosFirma:
-          body.horariosFirma === "true" || body.horariosFirma === true,
-        funcionContrato:
-          body.funcionContrato === "true" || body.funcionContrato === true,
+        libroAsistencia: Number(
+          body.supervisionTerreno.asistencia.libroAsistencia,
+        ),
+        firmaLibro: Number(body.supervisionTerreno.asistencia.firmaLibro),
+        horariosFirma: Number(body.supervisionTerreno.asistencia.horariosFirma),
+        funcionContrato: Number(
+          body.supervisionTerreno.asistencia.funcionContrato,
+        ),
+        observaciones: body.supervisionTerreno.asistencia.observaciones || "",
       },
       // Se añaden todos los campos de condicionesTrabajo
-      // mantiene nombres del componente supervision-terreno
+      // Mantiene nombres del componente supervision-terreno
       condicionesTrabajo: {
-        recibeEpp: body.recibeEpp === "true" || body.recibeEpp === true,
-        eppAdecuados:
-          body.eppAdecuados === "true" || body.eppAdecuados === true,
-        utilizaEpp: body.utilizaEpp === "true" || body.utilizaEpp === true,
-        insumosAdecuados:
-          body.insumosAdecuados === "true" || body.insumosAdecuados === true,
-        condicionesLaboralesAdecuadas:
-          body.condicionesOptimas === "true" ||
-          body.condicionesOptimas === true,
-        charla: body.charla === "true" || body.charla === true,
+        recibeEpp: Number(body.supervisionTerreno.condicionesTrabajo.recibeEpp),
+        eppAdecuados: Number(
+          body.supervisionTerreno.condicionesTrabajo.eppAdecuados,
+        ),
+        utilizaEpp: Number(
+          body.supervisionTerreno.condicionesTrabajo.utilizaEpp,
+        ),
+        insumosAdecuados: Number(
+          body.supervisionTerreno.condicionesTrabajo.insumosAdecuados,
+        ),
+        condicionesLaboralesAdecuadas: Number(
+          body.supervisionTerreno.condicionesTrabajo
+            .condicionesLaboralesAdecuadas,
+        ),
+        charla: Number(body.supervisionTerreno.condicionesTrabajo.charla),
+        observaciones:
+          body.supervisionTerreno.condicionesTrabajo.observaciones || "",
       },
       supervisionEjecutora: {
-        supervisionEjecutora: false, // Veces que empleador supervisió a beneficiario
+        // Ahora se toma el valor numérico enviado en lugar de asignar false por defecto
+        supervisionEjecutora: Number(
+          body.supervisionTerreno.supervisionEjecutora.supervisionEjecutora,
+        ),
+        observaciones:
+          body.supervisionTerreno.supervisionEjecutora.observaciones || "",
       },
     },
     supervisionOficina: {
       // Nuevo campo. Calcula cuántos informes fueron realizados en papel
       // y cuántos en digital. En componente se llama `soportePapel`
-      tipoSoporteOficina: body.tipoSoporteOficina,
+      tipoSoporteOficina: body.supervisionOficina.tipoSoporteOficina,
       // Se añaden todos los campos de requisitos
-      // mantiene nombres del componente supervision-oficina
+      // Mantiene nombres del componente supervision-oficina
       requisitos: {
-        cedulaIdentidad:
-          body.cedulaIdentidad === "true" || body.cedulaIdentidad === true,
-        declaracionCesantia:
-          body.declaracionCesantia === "true" ||
-          body.declaracionCesantia === true,
-        rsh: body.rsh === "true" || body.rsh === true,
-        certificadoCotizaciones:
-          body.certificadoCotizaciones === "true" ||
-          body.certificadoCotizaciones === true,
+        cedulaIdentidad: Number(
+          body.supervisionOficina.requisitos.cedulaIdentidad,
+        ),
+        declaracionCesantia: Number(
+          body.supervisionOficina.requisitos.declaracionCesantia,
+        ),
+        rsh: Number(body.supervisionOficina.requisitos.rsh),
+        certificadoCotizaciones: Number(
+          body.supervisionOficina.requisitos.certificadoCotizaciones,
+        ),
+        observaciones: body.supervisionOficina.requisitos.observaciones || "",
       },
       // Se añaden todos los campos de revisionContrato
-      // mantiene nombres del componente supervision-oficina
+      // Mantiene nombres del componente supervision-oficina
       revisionContrato: {
-        debidamenteFirmado:
-          body.debidamenteFirmado === "true" ||
-          body.debidamenteFirmado === true,
-        horarios: body.horarios === "true" || body.horarios === true,
-        direccionLugarTrabajo:
-          body.direccionLugarTrabajo === "true" ||
-          body.direccionLugarTrabajo === true,
-        funcionTrabajo:
-          body.funcionTrabajo === "true" || body.funcionTrabajo === true,
+        debidamenteFirmado: Number(
+          body.supervisionOficina.revisionContrato.debidamenteFirmado,
+        ),
+        horarios: Number(body.supervisionOficina.revisionContrato.horarios),
+        direccionLugarTrabajo: Number(
+          body.supervisionOficina.revisionContrato.direccionLugarTrabajo,
+        ),
+        funcionTrabajo: Number(
+          body.supervisionOficina.revisionContrato.funcionTrabajo,
+        ),
+        observaciones:
+          body.supervisionOficina.revisionContrato.observaciones || "",
       },
       // Se añaden todos los campos de obligacionesLaborales
-      // mantiene nombres del componente supervision-oficina
+      // Mantiene nombres del componente supervision-oficina
       obligacionesLaborales: {
-        actaEpp: body.actaEpp === "true" || body.actaEpp === true,
-        actaInsumos: body.actaInsumos === "true" || body.actaInsumos === true,
-        liquidacionesSueldos:
-          body.liquidacionesSueldos === "true" ||
-          body.liquidacionesSueldos === true,
-        comprobantePagosPrevisionales:
-          body.comprobantePagosPrevisionales === "true" ||
-          body.comprobantePagosPrevisionales === true,
-        registroSupervisiones:
-          body.registroSupervisiones === "true" ||
-          body.registroSupervisiones === true,
-        registroAsistencia:
-          body.registroAsistencia === "true" ||
-          body.registroAsistencia === true,
+        actaEpp: Number(body.supervisionOficina.obligacionesLaborales.actaEpp),
+        actaInsumos: Number(
+          body.supervisionOficina.obligacionesLaborales.actaInsumos,
+        ),
+        liquidacionesSueldos: Number(
+          body.supervisionOficina.obligacionesLaborales.liquidacionesSueldos,
+        ),
+        comprobantePagosPrevisionales: Number(
+          body.supervisionOficina.obligacionesLaborales
+            .comprobantePagosPrevisionales,
+        ),
+        registroSupervisiones: Number(
+          body.supervisionOficina.obligacionesLaborales.registroSupervisiones,
+        ),
+        registroAsistencia: Number(
+          body.supervisionOficina.obligacionesLaborales.registroAsistencia,
+        ),
+        observaciones:
+          body.supervisionOficina.obligacionesLaborales.observaciones || "",
       },
     },
     comentariosGenerales: body.comentariosGenerales, // Proviene del formulario del componente informe-mensual
