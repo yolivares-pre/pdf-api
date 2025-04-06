@@ -77,6 +77,11 @@ app.post("/api/create-pdf", async (req, res) => {
     const mesTexto = monthNames[mesNum - 1] || "Mes desconocido";
     const regionTexto = regionNames[region] || "Región desconocida";
 
+    /**
+    --------------------------------
+    Comienza la creación de archivo
+    --------------------------------
+    */
     const pdfDoc = await PDFDocument.create();
     pdfDoc.registerFontkit(fontkit);
 
@@ -90,11 +95,11 @@ app.post("/api/create-pdf", async (req, res) => {
     );
 
     // Variables de diseño
-    const fontSize = 11; // Reducido ligeramente
+    const fontSize = 12; //
     const lineSpacing = 5; // Espacio entre líneas explícito
     const margin = 50;
-    const bottomMargin = 60; // Aumentado para evitar cortes
-    const topMargin = 140; // Ajustado para los encabezados
+    const bottomMargin = 30; // Aumentado para evitar cortes
+    const topMargin = 70; // Ajustado para los encabezados
     const pageHeight = 842;
     const pageWidth = 595;
     const contentWidth = pageWidth - 2 * margin;
