@@ -10,6 +10,8 @@ import { validateRequestBody, removeAccents } from "./utils/validation.js";
 import { fileURLToPath } from "url";
 import { loadAndEmbedImage, drawImage } from "./utils/images.js";
 import { fetch } from "undici";
+import { monthNames } from "./utils/meses.js";
+import { regionNames } from "./utils/regiones.js";
 
 dotenv.config();
 
@@ -19,40 +21,6 @@ const __dirname = path.dirname(__filename);
 const app = express();
 app.use(cors());
 app.use(express.json({ limit: "50mb" }));
-
-const monthNames = [
-  "Enero",
-  "Febrero",
-  "Marzo",
-  "Abril",
-  "Mayo",
-  "Junio",
-  "Julio",
-  "Agosto",
-  "Septiembre",
-  "Octubre",
-  "Noviembre",
-  "Diciembre",
-];
-
-const regionNames = {
-  "01": "Tarapacá",
-  "02": "Antofagasta",
-  "03": "Atacama",
-  "04": "Coquimbo",
-  "05": "Valparaíso",
-  "06": "Libertador Gral. Bernardo O'Higgins",
-  "07": "Maule",
-  "08": "Biobío",
-  "09": "Araucanía",
-  10: "Los Lagos",
-  11: "Aysén del General Carlos Ibáñez del Campo",
-  12: "Magallanes y de la Antártica Chilena",
-  13: "Metropolitana de Santiago",
-  14: "Los Ríos",
-  15: "Arica y Parinacota",
-  16: "Ñuble",
-};
 
 app.post("/api/create-pdf", async (req, res) => {
   try {
@@ -217,7 +185,7 @@ app.post("/api/create-pdf", async (req, res) => {
       height: 47,
     });
 
-    const title = `Informe técnico ${mesTexto}`;
+    const title = `Informe técnico ${mesTexto.toLowerCase()}`;
     const subtitle = `Región de ${regionTexto}`;
 
     const titleWidth = boldFont.widthOfTextAtSize(title, fontSize + 4);
