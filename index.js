@@ -352,7 +352,6 @@ app.post("/api/create-pdf", async (req, res) => {
     }
 
     // Función para dibujar secciones de supervisión con enfoque en personas
-    // Función para dibujar secciones de supervisión con enfoque en personas
     const drawSupervisionsSection = (title, sectionData) => {
       // Verificar espacio suficiente para el título de sección
       checkPageSpace(fontSize * 2 + lineSpacing * 3);
@@ -366,6 +365,33 @@ app.post("/api/create-pdf", async (req, res) => {
         color: rgb(0.0588, 0.4118, 0.7686),
       });
       currentY -= fontSize + lineSpacing * 2;
+
+      // Agregar línea con el soporte (digital / papel) justo debajo del título
+      if (title.includes("Terreno") && sectionData.tipoSoporteTerreno) {
+        const digital = Number(sectionData.tipoSoporteTerreno.digital) || 0;
+        const papel = Number(sectionData.tipoSoporteTerreno.papel) || 0;
+        const soporteText = `${digital} supervisiones fueron realizadas digitalmente y ${papel} en soporte papel.`;
+        page.drawText(soporteText, {
+          x: margin,
+          y: currentY,
+          size: fontSize,
+          font: regularFont,
+          color: rgb(0, 0, 0),
+        });
+        currentY -= fontSize + lineSpacing;
+      } else if (title.includes("Oficina") && sectionData.tipoSoporteOficina) {
+        const digital = Number(sectionData.tipoSoporteOficina.digital) || 0;
+        const papel = Number(sectionData.tipoSoporteOficina.papel) || 0;
+        const soporteText = `Soporte Digital: ${digital} / Soporte Papel: ${papel}`;
+        page.drawText(soporteText, {
+          x: margin,
+          y: currentY,
+          size: fontSize,
+          font: regularFont,
+          color: rgb(0, 0, 0),
+        });
+        currentY -= fontSize + lineSpacing;
+      }
 
       // Mapeo de claves a títulos descriptivos
       const fieldMappings = {
