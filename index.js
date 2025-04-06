@@ -6,7 +6,7 @@ import cors from "cors";
 import dotenv from "dotenv";
 import { loadFonts } from "./utils/loadFonts.js";
 import { addHeaderLine } from "./utils/addHeaderLine.js";
-import { validateRequestBody, removeAccents } from "./utils/validation.js";
+import { validateRequestBody } from "./utils/validation.js";
 import { fileURLToPath } from "url";
 import { loadAndEmbedImage, drawImage } from "./utils/images.js";
 import { fetch } from "undici";
@@ -41,51 +41,121 @@ app.post("/api/create-pdf", async (req, res) => {
     if (!req.body.datosGenerales) {
       // Está usando el formato antiguo, vamos a adaptarlo
       req.body = {
-        mes: req.body.mes,
-        region: req.body.region,
+        mes: req.body.mes, // Luego se realiza un toLowerCase()
+        region: req.body.region, // Debe ser el nombre de la región, no el número
+        // Tabla inicial del documento
         datosGenerales: {
-          encontradas: req.body.encontradas,
-          ausentes: req.body.ausentes,
-          renuncias: req.body.renuncias,
-          fallecidos: req.body.fallecidos,
-          fiscalizados: req.body.fiscalizados,
-          desvinculados: req.body.desvinculados || 0,
-          total: req.body.total,
+          // Los siguientes valores se calculan a partir del agregado de los campos del objeto asistencia
+          // del componente supervision-terreno/index.vue, a excepción de los señalados,
+          // los cuales deben ser ingresados manualmente por el usuario
+          encontradas: req.body.encontradas, // Contabiliza asistencia.presencia = true
+          ausentes: req.body.ausentes, // Contabiliza asistencia.presencia = false
+          renuncias: req.body.renuncias, // Ingresado por usuario
+          fallecidos: req.body.fallecidos, // Ingresado por usuario
+          fiscalizados: req.body.fiscalizados, // Contabiliza los registros en tabla realizados en mes
+          desvinculados: req.body.desvinculados || 0, // Ingresado por usuario
+          total: req.body.total, // Corresponde al universo de beneficiarios total en la región.
         },
         supervisionTerreno: {
+          // Nuevo campo. Calcula cuántos informes fueron realizados en papel
+          // y cuántos en digital. En componente se llama `soportePapel`
+          tipoSoporteTerreno: req.body.tipoSoporteTerreno,
+          // Se añaden todos los campos de asistencia, a excepción de `presencia`
+          // porque ese valor es relevante y se calcula en tabla de `datosGenerales`.
+          //mantiene nombres del componente supervision-terreno
           asistencia: {
             libroAsistencia:
               req.body.libroAsistencia === "true" ||
               req.body.libroAsistencia === true,
-            observaciones: req.body.libroAsistenciaObserva,
+            firmaLibro:
+              req.body.firmaLibro === "true" || req.body.firmaLibro === true,
+            horariosFirma:
+              req.body.horariosFirma === "true" ||
+              req.body.horariosFirma === true,
+            funcionContrato:
+              req.body.funcionContrato === "true" ||
+              req.body.funcionContrato === true,
           },
+          // Se añaden todos los campos de condicionesTrabajo
+          // mantiene nombres del componente supervision-terreno
           condicionesTrabajo: {
-            recibeEpp: req.body.epp === "true" || req.body.epp === true,
-            utilizaEpp: req.body.usoEpp === "true" || req.body.usoEpp === true,
+            recibeEpp:
+              req.body.recibeEpp === "true" || req.body.recibeEpp === true,
+            eppAdecuados:
+              req.body.eppAdecuados === "true" ||
+              req.body.eppAdecuados === true,
+            utilizaEpp:
+              req.body.utilizaEpp === "true" || req.body.utilizaEpp === true,
+            insumosAdecuados:
+              req.body.insumosAdecuados === "true" ||
+              req.body.insumosAdecuados === true,
             condicionesLaboralesAdecuadas:
               req.body.condicionesOptimas === "true" ||
               req.body.condicionesOptimas === true,
-            observaciones: `${req.body.eppObserva || ""}\n${req.body.usoEppObserva || ""}\n${req.body.condicionesOptimasObserva || ""}`,
+            charla: req.body.charla === "true" || req.body.charla === true,
           },
           supervisionEjecutora: {
-            supervisionEjecutora: true, // valor por defecto
+            supervisionEjecutora: false, // Veces que empleador supervisió a beneficiario
           },
         },
         supervisionOficina: {
-          requisitos: {},
-          revisionContrato: {
-            funcionTrabajo:
-              req.body.laboresContrato === "true" ||
-              req.body.laboresContrato === true,
-            observaciones: req.body.laboresContratoObserva,
+          // Nuevo campo. Calcula cuántos informes fueron realizados en papel
+          // y cuántos en digital. En componente se llama `soportePapel`
+          tipoSoporteOficina: req.body.tipoSoporteOficina,
+          // Se añaden todos los campos de requisitos
+          // mantiene nombres del componente supervision-oficina
+          requisitos: {
+            cedulaIdentidad:
+              req.body.cedulaIdentidad === "true" ||
+              req.body.cedulaIdentidad === true,
+            declaracionCesantia:
+              req.body.declaracionCesantia === "true" ||
+              req.body.declaracionCesantia === true,
+            rsh: req.body.rsh === "true" || req.body.rsh === true,
+            certificadoCotizaciones:
+              req.body.certificadoCotizaciones === "true" ||
+              req.body.certificadoCotizaciones === true,
           },
-          obligacionesLaborales: {},
+          // Se añaden todos los campos de revisionContrato
+          // mantiene nombres del componente supervision-oficina
+          revisionContrato: {
+            debidamenteFirmado:
+              req.body.debidamenteFirmado === "true" ||
+              req.body.debidamenteFirmado === true,
+            horarios:
+              req.body.horarios === "true" || req.body.horarios === true,
+            direccionLugarTrabajo:
+              req.body.direccionLugarTrabajo === "true" ||
+              req.body.direccionLugarTrabajo === true,
+            funcionTrabajo:
+              req.body.funcionTrabajo === "true" ||
+              req.body.funcionTrabajo === true,
+          },
+          // Se añaden todos los campos de obligacionesLaborales
+          // mantiene nombres del componente supervision-oficina
+          obligacionesLaborales: {
+            actaEpp: req.body.actaEpp === "true" || req.body.actaEpp === true,
+            actaInsumos:
+              req.body.actaInsumos === "true" || req.body.actaInsumos === true,
+            liquidacionesSueldos:
+              req.body.liquidacionesSueldos === "true" ||
+              req.body.liquidacionesSueldos === true,
+            comprobantePagosPrevisionales:
+              req.body.comprobantePagosPrevisionales === "true" ||
+              req.body.comprobantePagosPrevisionales === true,
+            registroSupervisiones:
+              req.body.registroSupervisiones === "true" ||
+              req.body.registroSupervisiones === true,
+            registroAsistencia:
+              req.body.registroAsistencia === "true" ||
+              req.body.registroAsistencia === true,
+          },
         },
-        comentariosGenerales: req.body.comentariosGenerales,
-        comentariosFiscalizacion: req.body.comentariosFiscalizacion,
-        otrosMeses: req.body.otrosMeses || [],
-        firmante: req.body.firmante,
-        cargo: req.body.cargo,
+        comentariosGenerales: req.body.comentariosGenerales, // Proviene del formulario del componente informe-mensual
+        comentariosFiscalizacion: req.body.comentariosFiscalizacion, // Proviene del formulario del componente informe-mensual
+        otrosMeses: req.body.otrosMeses || [], // Se calcula a partir de datosGenerales.fiscalizados
+        firmante: req.body.firmante, // Proviene del formulario del componente informe-mensual
+        cargo: req.body.cargo, // Proviene del formulario del componente informe-mensual
       };
     }
 
