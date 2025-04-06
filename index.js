@@ -9,7 +9,7 @@ import { addHeaderLine } from "./utils/addHeaderLine.js";
 import { validateRequestBody, removeAccents } from "./utils/validation.js";
 import { fileURLToPath } from "url";
 import { loadAndEmbedImage, drawImage } from "./utils/images.js";
-import fetch from "node-fetch";
+import { fetch } from "undici";
 
 dotenv.config();
 
