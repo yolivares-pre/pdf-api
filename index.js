@@ -585,11 +585,10 @@ app.post("/api/create-pdf", async (req, res) => {
 
       // Dibujar cada sección con sus campos
       Object.entries(sectionGroups).forEach(([sectionName, fields]) => {
-        if (fields.length === 0) return; // Saltar secciones sin campos
+        if (fields.length === 0) return;
 
         checkPageSpace(fontSize + lineSpacing * 2);
 
-        // Título de la subsección
         if (Object.keys(sectionGroups).length > 1) {
           page.drawText(sectionName, {
             x: margin,
@@ -601,36 +600,36 @@ app.post("/api/create-pdf", async (req, res) => {
           currentY -= fontSize + lineSpacing * 2;
         }
 
-        // Dibujar cada campo de la sección
         fields.forEach((field) => {
           const { key, value } = field;
-
-          // Para cada campo, calculamos cuántas personas cumplen
-          const totalPersonas = fiscalizados ? parseInt(fiscalizados, 10) : 100; // Total de personas fiscalizadas
+          const totalPersonas = fiscalizados ? parseInt(fiscalizados, 10) : 100;
           const cumplieron = value
             ? Math.round(totalPersonas * 0.75)
-            : Math.round(totalPersonas * 0.25); // Ejemplo: si value es true, 75% cumplieron
+            : Math.round(totalPersonas * 0.25);
           const noCumplieron = totalPersonas - cumplieron;
 
-          // Calcular cuánto espacio necesitaremos
-          let requiredSpace = fontSize * 3 + lineSpacing * 4; // Espacio base para textos
+          let fieldContentHeight = fontSize * 3 + lineSpacing * 4;
+          let observationHeight = 0;
 
-          // Si hay observaciones, añadir espacio para ellas
           if (field.observacion) {
-            const observacionesLines = splitTextIntoLines(
-              field.observacion,
-              contentWidth - 20,
-              regularFont,
-              fontSize,
-            );
-            requiredSpace +=
-              (fontSize + lineSpacing) * observacionesLines.length;
+            const observacionParagraphs = field.observacion
+              .split("\n")
+              .filter((p) => p.trim().length > 0);
+            observacionParagraphs.forEach((paragraph) => {
+              const lines = splitTextIntoLines(
+                paragraph,
+                contentWidth - 20,
+                regularFont,
+                fontSize,
+              );
+              observationHeight +=
+                (fontSize + lineSpacing) * lines.length + lineSpacing;
+            });
+            fieldContentHeight += observationHeight;
           }
 
-          // Verificar espacio antes de dibujar este campo completo
-          checkPageSpace(requiredSpace);
+          checkPageSpace(fieldContentHeight);
 
-          // Título del campo con cantidad de personas (en fuente regular, no negrita)
           page.drawText(`${cumplieron} ${fieldMappings[key]}`, {
             x: margin,
             y: currentY,
@@ -640,37 +639,32 @@ app.post("/api/create-pdf", async (req, res) => {
           });
           currentY -= fontSize + lineSpacing;
 
-          // Línea adicional que indica cuántas personas no cumplieron
           const textoBase = fieldMappings[key];
           let textoNegativo = "";
-
-          // Procesar el texto para la versión negativa
-          if (textoBase.includes("contaron con")) {
+          if (textoBase.includes("contaron con"))
             textoNegativo = textoBase.replace(
               "contaron con",
               "no contaron con",
             );
-          } else if (textoBase.includes("recibieron")) {
+          else if (textoBase.includes("recibieron"))
             textoNegativo = textoBase.replace("recibieron", "no recibieron");
-          } else if (textoBase.includes("presentaron")) {
+          else if (textoBase.includes("presentaron"))
             textoNegativo = textoBase.replace("presentaron", "no presentaron");
-          } else if (textoBase.includes("utilizaron")) {
+          else if (textoBase.includes("utilizaron"))
             textoNegativo = textoBase.replace("utilizaron", "no utilizaron");
-          } else if (textoBase.includes("cumplieron")) {
+          else if (textoBase.includes("cumplieron"))
             textoNegativo = textoBase.replace("cumplieron", "no cumplieron");
-          } else if (textoBase.includes("realizaron")) {
+          else if (textoBase.includes("realizaron"))
             textoNegativo = textoBase.replace("realizaron", "no realizaron");
-          } else if (textoBase.includes("estaban")) {
+          else if (textoBase.includes("estaban"))
             textoNegativo = textoBase.replace("estaban", "no estaban");
-          } else if (textoBase.includes("firmaron")) {
+          else if (textoBase.includes("firmaron"))
             textoNegativo = textoBase.replace("firmaron", "no firmaron");
-          } else if (textoBase.includes("tuvieron")) {
+          else if (textoBase.includes("tuvieron"))
             textoNegativo = textoBase.replace("tuvieron", "no tuvieron");
-          } else if (textoBase.includes("fueron")) {
+          else if (textoBase.includes("fueron"))
             textoNegativo = textoBase.replace("fueron", "no fueron");
-          } else {
-            textoNegativo = "no " + textoBase;
-          }
+          else textoNegativo = "no " + textoBase;
 
           page.drawText(`${noCumplieron} ${textoNegativo}`, {
             x: margin + 10,
@@ -679,21 +673,24 @@ app.post("/api/create-pdf", async (req, res) => {
             font: lightFont,
             color: rgb(0.4, 0.4, 0.4),
           });
-          currentY -= fontSize + lineSpacing;
+          currentY -= fontSize + lineSpacing * 2;
 
-          // Si hay observaciones, mostrarlas
           if (field.observacion) {
-            const observacionesLines = splitTextIntoLines(
-              field.observacion,
-              contentWidth - 20,
-              regularFont,
-              fontSize,
-            );
+            page.drawText("Observaciones:", {
+              x: margin + 10,
+              y: currentY,
+              size: fontSize,
+              font: boldFont,
+              color: rgb(0.3, 0.3, 0.3),
+            });
+            currentY -= fontSize + lineSpacing;
 
-            observacionesLines.forEach((line) => {
-              // Comprobar espacio para cada línea individual
-              if (checkPageSpace(fontSize + lineSpacing)) {
-                // Si se creó una nueva página, indicar continuación
+            const observacionParagraphs = field.observacion
+              .split("\n")
+              .filter((p) => p.trim().length > 0);
+
+            observacionParagraphs.forEach((paragraph, pIndex) => {
+              if (pIndex > 0 && checkPageSpace(fontSize + lineSpacing)) {
                 page.drawText("Observaciones (continuación):", {
                   x: margin + 10,
                   y: currentY,
@@ -704,194 +701,237 @@ app.post("/api/create-pdf", async (req, res) => {
                 currentY -= fontSize + lineSpacing;
               }
 
-              page.drawText(line, {
-                x: margin + 10,
-                y: currentY,
-                size: fontSize,
-                font: regularFont,
-                color: rgb(0, 0, 0),
+              const lines = splitTextIntoLines(
+                paragraph,
+                contentWidth - 20,
+                regularFont,
+                fontSize,
+              );
+
+              lines.forEach((line, lineIndex) => {
+                if (lineIndex > 0 && checkPageSpace(fontSize + lineSpacing)) {
+                  page.drawText("Observaciones (continuación):", {
+                    x: margin + 10,
+                    y: currentY,
+                    size: fontSize,
+                    font: boldFont,
+                    color: rgb(0.3, 0.3, 0.3),
+                  });
+                  currentY -= fontSize + lineSpacing;
+                }
+
+                page.drawText(line, {
+                  x: margin + 10,
+                  y: currentY,
+                  size: fontSize,
+                  font: regularFont,
+                  color: rgb(0, 0, 0),
+                });
+                currentY -= fontSize + lineSpacing;
               });
-              currentY -= fontSize + lineSpacing;
+
+              if (pIndex < observacionParagraphs.length - 1) {
+                currentY -= lineSpacing;
+              }
             });
           }
 
-          currentY -= lineSpacing * 2; // Espacio adicional entre campos
+          currentY -= lineSpacing * 3;
         });
-
-        currentY -= lineSpacing * 2; // Espacio adicional entre secciones
       });
-    };
+    }; // Cierre correcto de la función drawSupervisionsSection
 
-    // Dibujar secciones de supervisión
+    // Llamar a la función para las secciones
     drawSupervisionsSection("Supervisión en Terreno", supervisionTerreno);
     drawSupervisionsSection("Supervisión en Oficina", supervisionOficina);
 
     // Sección de comentarios generales
-    checkPageSpace(fontSize + lineSpacing * 3);
-    page.drawText("Comentarios generales de supervisiones", {
-      x: margin,
-      y: currentY,
-      size: fontSize + 1,
-      font: boldFont,
-      color: rgb(0.0588, 0.4118, 0.7686),
-    });
-    currentY -= fontSize + lineSpacing;
+    if (comentariosGenerales) {
+      checkPageSpace(fontSize * 2 + lineSpacing * 3);
 
-    const generalCommentsLines = splitTextIntoLines(
-      comentariosGenerales || "",
-      contentWidth,
-      regularFont,
-      fontSize,
-    );
-
-    generalCommentsLines.forEach((line) => {
-      if (checkPageSpace(fontSize + lineSpacing)) {
-        // Si se creó una nueva página, añadimos un título
-        page.drawText("Comentarios generales (continuación)", {
-          x: margin,
-          y: currentY,
-          size: fontSize + 1,
-          font: boldFont,
-          color: rgb(0.0588, 0.4118, 0.7686),
-        });
-        currentY -= fontSize + lineSpacing;
-      }
-
-      page.drawText(line, {
+      page.drawText("Comentarios generales", {
         x: margin,
         y: currentY,
-        size: fontSize,
-        font: regularFont,
-        color: rgb(0, 0, 0),
+        size: fontSize + 2,
+        font: boldFont,
+        color: rgb(0.0588, 0.4118, 0.7686),
       });
-      currentY -= fontSize + lineSpacing;
-    });
+      currentY -= fontSize + lineSpacing * 2;
 
-    currentY -= lineSpacing * 3;
+      const comentariosParagraphs = comentariosGenerales
+        .split("\n")
+        .filter((p) => p.trim().length > 0);
 
-    // Sección de avances del proyecto
-    checkPageSpace(fontSize + lineSpacing * 3);
-    page.drawText("Avances del proyecto y acciones de gestión desarrolladas", {
-      x: margin,
-      y: currentY,
-      size: fontSize + 1,
-      font: boldFont,
-      color: rgb(0.0588, 0.4118, 0.7686),
-    });
-    currentY -= fontSize + lineSpacing;
+      comentariosParagraphs.forEach((paragraph, pIndex) => {
+        if (pIndex > 0 && checkPageSpace(fontSize + lineSpacing)) {
+          page.drawText("Comentarios generales (continuación):", {
+            x: margin,
+            y: currentY,
+            size: fontSize + 1,
+            font: boldFont,
+            color: rgb(0.0588, 0.4118, 0.7686),
+          });
+          currentY -= fontSize + lineSpacing * 2;
+        }
 
-    const projectProgressLines = splitTextIntoLines(
-      comentariosFiscalizacion || "",
-      contentWidth,
-      regularFont,
-      fontSize,
-    );
+        const lines = splitTextIntoLines(
+          paragraph,
+          contentWidth,
+          regularFont,
+          fontSize,
+        );
 
-    projectProgressLines.forEach((line) => {
-      if (checkPageSpace(fontSize + lineSpacing)) {
-        // Si se creó una nueva página, añadimos un título
-        page.drawText("Avances del proyecto (continuación)", {
-          x: margin,
-          y: currentY,
-          size: fontSize + 1,
-          font: boldFont,
-          color: rgb(0.0588, 0.4118, 0.7686),
+        lines.forEach((line, lineIndex) => {
+          if (lineIndex > 0 && checkPageSpace(fontSize + lineSpacing)) {
+            // No hace falta repetir el título para cada línea
+          }
+
+          page.drawText(line, {
+            x: margin,
+            y: currentY,
+            size: fontSize,
+            font: regularFont,
+            color: rgb(0, 0, 0),
+          });
+          currentY -= fontSize + lineSpacing;
         });
-        currentY -= fontSize + lineSpacing;
-      }
 
-      page.drawText(line, {
+        if (pIndex < comentariosParagraphs.length - 1) {
+          currentY -= lineSpacing;
+        }
+      });
+
+      currentY -= lineSpacing * 3;
+    }
+
+    // Sección de comentarios sobre fiscalización
+    if (comentariosFiscalizacion) {
+      checkPageSpace(fontSize * 2 + lineSpacing * 3);
+
+      page.drawText("Comentarios sobre fiscalización", {
         x: margin,
         y: currentY,
-        size: fontSize,
-        font: regularFont,
-        color: rgb(0, 0, 0),
+        size: fontSize + 2,
+        font: boldFont,
+        color: rgb(0.0588, 0.4118, 0.7686),
       });
-      currentY -= fontSize + lineSpacing;
-    });
+      currentY -= fontSize + lineSpacing * 2;
 
-    currentY -= lineSpacing * 4;
+      const comentariosParagraphs = comentariosFiscalizacion
+        .split("\n")
+        .filter((p) => p.trim().length > 0);
 
-    // Sección de firma centrada
-    const drawSignatureSection = () => {
-      const lineLength = 200;
-      const pageWidth = page.getWidth();
+      comentariosParagraphs.forEach((paragraph, pIndex) => {
+        if (pIndex > 0 && checkPageSpace(fontSize + lineSpacing)) {
+          page.drawText("Comentarios sobre fiscalización (continuación):", {
+            x: margin,
+            y: currentY,
+            size: fontSize + 1,
+            font: boldFont,
+            color: rgb(0.0588, 0.4118, 0.7686),
+          });
+          currentY -= fontSize + lineSpacing * 2;
+        }
 
-      // Verifica si hay suficiente espacio
-      if (checkPageSpace(fontSize * 5 + lineSpacing * 8)) {
-        // Si se creó una nueva página, ajustamos currentY para centrar la firma
-        currentY -= pageHeight / 5;
+        const lines = splitTextIntoLines(
+          paragraph,
+          contentWidth,
+          regularFont,
+          fontSize,
+        );
+
+        lines.forEach((line, lineIndex) => {
+          if (lineIndex > 0 && checkPageSpace(fontSize + lineSpacing)) {
+            // No hace falta repetir el título para cada línea
+          }
+
+          page.drawText(line, {
+            x: margin,
+            y: currentY,
+            size: fontSize,
+            font: regularFont,
+            color: rgb(0, 0, 0),
+          });
+          currentY -= fontSize + lineSpacing;
+        });
+
+        if (pIndex < comentariosParagraphs.length - 1) {
+          currentY -= lineSpacing;
+        }
+      });
+
+      currentY -= lineSpacing * 3;
+    }
+
+    // Sección de firma
+    if (firmante) {
+      // Asegurar que la firma está en una nueva página si queda poco espacio
+      if (currentY < 250) {
+        page = pdfDoc.addPage([pageWidth, pageHeight]);
+        addHeaderLine(pdfDoc, page, imagesPath, margin, pageHeight);
+        currentY = pageHeight - topMargin;
       }
 
-      const lineY = currentY - lineSpacing * 10;
-      const lineXStart = (pageWidth - lineLength) / 2;
+      // Espacio para la firma
+      currentY -= 100;
 
-      // Dibuja la línea centrada horizontalmente
+      const lineWidth = 200;
+      const lineX = (pageWidth - lineWidth) / 2;
+
+      // Línea para firma
       page.drawLine({
-        start: { x: lineXStart, y: lineY },
-        end: { x: lineXStart + lineLength, y: lineY },
+        start: { x: lineX, y: currentY },
+        end: { x: lineX + lineWidth, y: currentY },
         thickness: 1,
         color: rgb(0, 0, 0),
       });
 
-      // Anchos de los textos para centrar horizontalmente
+      currentY -= 20;
+
+      // Nombre del firmante
+      const firmanteText = firmante || "Nombre del Firmante";
       const firmanteWidth = regularFont.widthOfTextAtSize(
-        firmante || "",
+        firmanteText,
         fontSize,
       );
-      const cargoWidth = lightFont.widthOfTextAtSize(cargo || "", fontSize);
 
-      // Dibuja el texto de firmante centrado horizontalmente
-      page.drawText(firmante || "", {
+      page.drawText(firmanteText, {
         x: (pageWidth - firmanteWidth) / 2,
-        y: lineY - fontSize - lineSpacing,
+        y: currentY,
         size: fontSize,
-        font: regularFont,
+        font: boldFont,
         color: rgb(0, 0, 0),
       });
 
-      // Dibuja el texto de cargo centrado horizontalmente
-      page.drawText(cargo || "", {
-        x: (pageWidth - cargoWidth) / 2,
-        y: lineY - fontSize * 2 - lineSpacing * 2,
-        size: fontSize,
-        font: lightFont,
-        color: rgb(0, 0, 0),
-      });
+      currentY -= fontSize + 5;
 
-      // Actualiza currentY para evitar solapamientos
-      currentY = lineY - fontSize * 3 - lineSpacing * 3;
-    };
+      // Cargo del firmante
+      if (cargo) {
+        const cargoText = cargo;
+        const cargoWidth = lightFont.widthOfTextAtSize(cargoText, fontSize - 1);
 
-    // Agregar la sección de firma
-    drawSignatureSection();
+        page.drawText(cargoText, {
+          x: (pageWidth - cargoWidth) / 2,
+          y: currentY,
+          size: fontSize - 1,
+          font: lightFont,
+          color: rgb(0, 0, 0),
+        });
+      }
+    }
 
-    // Generar y enviar el PDF
+    // Finaliza la respuesta HTTP con el PDF generado
     const pdfBytes = await pdfDoc.save();
     res.setHeader("Content-Type", "application/pdf");
-    res.setHeader(
-      "Content-Disposition",
-      `attachment; filename="${removeAccents(region)}_${mes}.pdf"`,
-    );
-    res.end(pdfBytes);
+    res.setHeader("Content-Disposition", "attachment; filename=informe.pdf");
+    res.send(Buffer.from(pdfBytes));
   } catch (error) {
     console.error("Error al generar el PDF:", error);
-    if (error.name === "ValidationError") {
-      return res
-        .status(400)
-        .json({ error: "Datos de entrada inválidos", details: error.message });
-    }
-    if (error.message && error.message.includes("fetch")) {
-      return res.status(500).json({
-        error: "Error al generar el gráfico",
-        details: "No se pudo conectar con el servicio de gráficos",
-      });
-    }
-    res.status(500).json({ error: "Error interno al generar el PDF" });
+    res.status(500).json({ error: error.message });
   }
 });
 
-// Solo escucha en modo desarrollo
+// Esta parte debe estar fuera del endpoint
 if (process.env.NODE_ENV !== "production") {
   const PORT = process.env.PORT || 3001;
   app.listen(PORT, () => {
