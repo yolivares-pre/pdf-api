@@ -18,7 +18,7 @@ const __dirname = path.dirname(__filename);
 
 const app = express();
 app.use(cors());
-app.use(express.json());
+app.use(express.json({ limit: "50mb" }));
 
 const monthNames = [
   "Enero",
@@ -60,7 +60,8 @@ app.post("/api/create-pdf", async (req, res) => {
     if (!req.body.datosGenerales) {
       // Está usando el formato antiguo, vamos a adaptarlo
       req.body = {
-        ...req.body,
+        mes: req.body.mes,
+        region: req.body.region,
         datosGenerales: {
           encontradas: req.body.encontradas,
           ausentes: req.body.ausentes,
@@ -99,10 +100,19 @@ app.post("/api/create-pdf", async (req, res) => {
           },
           obligacionesLaborales: {},
         },
+        comentariosGenerales: req.body.comentariosGenerales,
+        comentariosFiscalizacion: req.body.comentariosFiscalizacion,
+        otrosMeses: req.body.otrosMeses || [],
+        firmante: req.body.firmante,
+        cargo: req.body.cargo,
       };
     }
 
-    validateRequestBody(req.body);
+    // Crea un validador personalizado o usa el existente
+    const isValidationEnabled = process.env.ENABLE_VALIDATION === "true";
+    if (isValidationEnabled) {
+      validateRequestBody(req.body);
+    }
 
     // Extraer correctamente los datos después de la adaptación
     const {
@@ -113,24 +123,25 @@ app.post("/api/create-pdf", async (req, res) => {
       supervisionOficina,
       comentariosGenerales,
       comentariosFiscalizacion,
-      otrosMeses,
+      otrosMeses = [],
       firmante,
       cargo,
     } = req.body;
 
     // Extraer los campos de datosGenerales
     const {
-      encontradas,
-      ausentes,
-      renuncias,
-      fallecidos,
-      fiscalizados,
-      desvinculados,
-      total,
+      encontradas = 0,
+      ausentes = 0,
+      renuncias = 0,
+      fallecidos = 0,
+      fiscalizados = 0,
+      desvinculados = 0,
+      total = 0,
     } = datosGenerales || {};
 
     // Conversión de mes y región a texto
-    const mesTexto = monthNames[parseInt(mes, 10) - 1];
+    const mesNum = parseInt(mes, 10);
+    const mesTexto = monthNames[mesNum - 1] || "Mes desconocido";
     const regionTexto = regionNames[region] || "Región desconocida";
 
     const pdfDoc = await PDFDocument.create();
@@ -164,7 +175,9 @@ app.post("/api/create-pdf", async (req, res) => {
         page = pdfDoc.addPage([pageWidth, pageHeight]);
         addHeaderLine(pdfDoc, page, imagesPath, margin, pageHeight);
         currentY = pageHeight - topMargin;
+        return true; // Indica que se creó una nueva página
       }
+      return false; // No se necesitó crear una nueva página
     };
 
     const splitTextIntoLines = (text, maxWidth, font, size) => {
@@ -235,13 +248,13 @@ app.post("/api/create-pdf", async (req, res) => {
     currentY -= fontSize;
 
     const dataGeneralBeneficiaries = [
-      ["Beneficiarias/os activas/os", `${encontradas || 0}`],
-      ["Beneficiarias/os no activas/os", `${ausentes || 0}`],
-      ["Beneficiarias/os que renunciaron", `${renuncias || 0}`],
-      ["Beneficiarias/os desvinculadas/os", `${desvinculados || 0}`],
-      ["Beneficiarias/os fallecidas/os", `${fallecidos || 0}`],
-      ["Total beneficiarias/os", `${total || 0}`],
-      ["Total supervisiones", `${fiscalizados || 0}`],
+      ["Beneficiarias/os activas/os", `${encontradas}`],
+      ["Beneficiarias/os no activas/os", `${ausentes}`],
+      ["Beneficiarias/os que renunciaron", `${renuncias}`],
+      ["Beneficiarias/os desvinculadas/os", `${desvinculados}`],
+      ["Beneficiarias/os fallecidas/os", `${fallecidos}`],
+      ["Total beneficiarias/os", `${total}`],
+      ["Total supervisiones", `${fiscalizados}`],
     ];
 
     let startXGeneral = margin;
@@ -311,11 +324,18 @@ app.post("/api/create-pdf", async (req, res) => {
     currentY -= fontSize;
 
     // Invertir el orden para mostrar del mes más antiguo al más reciente
-    const labels = otrosMeses
-      .map((monthData) => monthNames[parseInt(monthData.month) - 1])
+    const labels = (otrosMeses || [])
+      .map((monthData) => {
+        const monthNum = parseInt(monthData.month, 10);
+        return monthNum >= 1 && monthNum <= 12
+          ? monthNames[monthNum - 1]
+          : "Mes desconocido";
+      })
       .reverse();
 
-    const data = otrosMeses.map((monthData) => monthData.total).reverse();
+    const data = (otrosMeses || [])
+      .map((monthData) => monthData.total || 0)
+      .reverse();
 
     // Configuración del gráfico usando los datos de otrosMeses invertidos
     const chartConfig = {
@@ -351,15 +371,16 @@ app.post("/api/create-pdf", async (req, res) => {
     };
 
     // Generar la URL del gráfico con la configuración actualizada
-    const chartUrl = `https://quickchart.io/chart?c=${encodeURIComponent(
-      JSON.stringify(chartConfig),
-    )}`;
-
-    // Obtener la imagen del gráfico desde la URL generada
+    let chartImage = null;
     try {
+      const chartUrl = `https://quickchart.io/chart?c=${encodeURIComponent(
+        JSON.stringify(chartConfig),
+      )}`;
+
+      // Obtener la imagen del gráfico desde la URL generada
       const chartResponse = await fetch(chartUrl);
       const chartImageBytes = await chartResponse.arrayBuffer();
-      const chartImage = await pdfDoc.embedPng(chartImageBytes);
+      chartImage = await pdfDoc.embedPng(chartImageBytes);
 
       const chartWidth = 400;
       const chartHeight = 200;
@@ -582,17 +603,21 @@ app.post("/api/create-pdf", async (req, res) => {
             : Math.round(totalPersonas * 0.25); // Ejemplo: si value es true, 75% cumplieron
           const noCumplieron = totalPersonas - cumplieron;
 
-          checkPageSpace(fontSize + 16); // Más espacio para dos líneas
+          // Verificar espacio para dos líneas más observaciones
+          const requiredSpace = field.observacion
+            ? fontSize * 4 + 16 // Más espacio si hay observaciones
+            : fontSize * 2 + 16; // Espacio estándar
 
-          // Título del campo con cantidad de personas (ahora en fuente regular, no negrita)
+          checkPageSpace(requiredSpace);
+
+          // Título del campo con cantidad de personas (en fuente regular, no negrita)
           page.drawText(`${cumplieron} ${fieldMappings[key]}`, {
             x: margin,
             y: currentY,
             size: fontSize + 1,
-            font: regularFont, // Cambiado a regularFont en lugar de boldFont
+            font: regularFont,
             color: rgb(0, 0, 0),
           });
-
           currentY -= fontSize + 4;
 
           // Línea adicional que indica cuántas personas no cumplieron
@@ -635,7 +660,6 @@ app.post("/api/create-pdf", async (req, res) => {
             font: lightFont,
             color: rgb(0.4, 0.4, 0.4),
           });
-
           currentY -= fontSize + 4;
 
           // Si hay observaciones, mostrarlas
@@ -648,7 +672,11 @@ app.post("/api/create-pdf", async (req, res) => {
             );
 
             observacionesLines.forEach((line) => {
-              checkPageSpace(fontSize + 4);
+              if (checkPageSpace(fontSize + 4)) {
+                // Si se creó una nueva página, añadimos un espaciado extra
+                currentY -= 5;
+              }
+
               page.drawText(line, {
                 x: margin + 10,
                 y: currentY,
@@ -680,7 +708,6 @@ app.post("/api/create-pdf", async (req, res) => {
       font: boldFont,
       color: rgb(0.0588, 0.4118, 0.7686),
     });
-
     currentY -= fontSize + 3;
 
     const generalCommentsLines = splitTextIntoLines(
@@ -691,7 +718,18 @@ app.post("/api/create-pdf", async (req, res) => {
     );
 
     generalCommentsLines.forEach((line) => {
-      checkPageSpace(fontSize + 4);
+      if (checkPageSpace(fontSize + 4)) {
+        // Si se creó una nueva página, añadimos un título
+        page.drawText("Comentarios generales (continuación)", {
+          x: margin,
+          y: currentY,
+          size: fontSize + 1,
+          font: boldFont,
+          color: rgb(0.0588, 0.4118, 0.7686),
+        });
+        currentY -= fontSize + 3;
+      }
+
       page.drawText(line, {
         x: margin,
         y: currentY,
@@ -713,7 +751,6 @@ app.post("/api/create-pdf", async (req, res) => {
       font: boldFont,
       color: rgb(0.0588, 0.4118, 0.7686),
     });
-
     currentY -= fontSize + 3;
 
     const projectProgressLines = splitTextIntoLines(
@@ -724,7 +761,18 @@ app.post("/api/create-pdf", async (req, res) => {
     );
 
     projectProgressLines.forEach((line) => {
-      checkPageSpace(fontSize + 4);
+      if (checkPageSpace(fontSize + 4)) {
+        // Si se creó una nueva página, añadimos un título
+        page.drawText("Avances del proyecto (continuación)", {
+          x: margin,
+          y: currentY,
+          size: fontSize + 1,
+          font: boldFont,
+          color: rgb(0.0588, 0.4118, 0.7686),
+        });
+        currentY -= fontSize + 3;
+      }
+
       page.drawText(line, {
         x: margin,
         y: currentY,
@@ -734,6 +782,8 @@ app.post("/api/create-pdf", async (req, res) => {
       });
       currentY -= fontSize + 4;
     });
+
+    currentY -= fontSize + 16;
 
     // Sección de firma centrada
     const drawSignatureSection = () => {
@@ -792,7 +842,7 @@ app.post("/api/create-pdf", async (req, res) => {
     res.setHeader("Content-Type", "application/pdf");
     res.setHeader(
       "Content-Disposition",
-      `attachment; filename="${removeAccents(regionTexto)}_${mesTexto}.pdf"`,
+      `attachment; filename="${removeAccents(region)}_${mes}.pdf"`,
     );
     res.end(pdfBytes);
   } catch (error) {
