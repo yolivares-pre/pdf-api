@@ -15,6 +15,19 @@ import { regionNames } from "./utils/regiones.js";
 
 dotenv.config();
 
+/**
+ * Obtención de rutas de archivo y directorio en módulos ES.
+ *
+ * En módulos ES (usando import/export), las variables globales __filename y __dirname
+ * que existen en CommonJS no están disponibles. Este código las recrea:
+ *
+ * - import.meta.url: Proporciona la URL completa del módulo actual (ej: file:///ruta/al/archivo.js)
+ * - fileURLToPath(): Convierte esa URL a una ruta de sistema de archivos convencional
+ * - path.dirname(): Extrae la ruta del directorio del archivo
+ *
+ * Esto nos permite referenciar rutas absolutas correctamente en el proyecto.
+ */
+
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
