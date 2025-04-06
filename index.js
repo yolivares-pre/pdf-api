@@ -56,28 +56,78 @@ const regionNames = {
 
 app.post("/api/create-pdf", async (req, res) => {
   try {
+    // Adaptar el formato antiguo al nuevo si es necesario
+    if (!req.body.datosGenerales) {
+      // Está usando el formato antiguo, vamos a adaptarlo
+      req.body = {
+        ...req.body,
+        datosGenerales: {
+          encontradas: req.body.encontradas,
+          ausentes: req.body.ausentes,
+          renuncias: req.body.renuncias,
+          fallecidos: req.body.fallecidos,
+          fiscalizados: req.body.fiscalizados,
+          desvinculados: req.body.desvinculados || 0,
+          total: req.body.total,
+        },
+        supervisionTerreno: {
+          asistencia: {
+            libroAsistencia:
+              req.body.libroAsistencia === "true" ||
+              req.body.libroAsistencia === true,
+            observaciones: req.body.libroAsistenciaObserva,
+          },
+          condicionesTrabajo: {
+            recibeEpp: req.body.epp === "true" || req.body.epp === true,
+            utilizaEpp: req.body.usoEpp === "true" || req.body.usoEpp === true,
+            condicionesLaboralesAdecuadas:
+              req.body.condicionesOptimas === "true" ||
+              req.body.condicionesOptimas === true,
+            observaciones: `${req.body.eppObserva || ""}\n${req.body.usoEppObserva || ""}\n${req.body.condicionesOptimasObserva || ""}`,
+          },
+          supervisionEjecutora: {
+            supervisionEjecutora: true, // valor por defecto
+          },
+        },
+        supervisionOficina: {
+          requisitos: {},
+          revisionContrato: {
+            funcionTrabajo:
+              req.body.laboresContrato === "true" ||
+              req.body.laboresContrato === true,
+            observaciones: req.body.laboresContratoObserva,
+          },
+          obligacionesLaborales: {},
+        },
+      };
+    }
+
     validateRequestBody(req.body);
 
+    // Extraer correctamente los datos después de la adaptación
     const {
       mes,
       region,
-      datosGenerales: {
-        encontradas,
-        ausentes,
-        renuncias,
-        fallecidos,
-        fiscalizados,
-        desvinculados,
-        total,
-      } = {},
-      supervisionTerreno = {}, // Objetos completos, no desestructurados
-      supervisionOficina = {}, // Objetos completos, no desestructurados
+      datosGenerales,
+      supervisionTerreno,
+      supervisionOficina,
       comentariosGenerales,
       comentariosFiscalizacion,
       otrosMeses,
       firmante,
       cargo,
     } = req.body;
+
+    // Extraer los campos de datosGenerales
+    const {
+      encontradas,
+      ausentes,
+      renuncias,
+      fallecidos,
+      fiscalizados,
+      desvinculados,
+      total,
+    } = datosGenerales || {};
 
     // Conversión de mes y región a texto
     const mesTexto = monthNames[parseInt(mes, 10) - 1];
@@ -105,6 +155,8 @@ app.post("/api/create-pdf", async (req, res) => {
 
     let page = pdfDoc.addPage([pageWidth, pageHeight]);
     await addHeaderLine(pdfDoc, page, imagesPath, margin, pageHeight);
+
+    let currentY = pageHeight - 172;
 
     // Define helper functions within the scope
     const checkPageSpace = (requiredSpace) => {
@@ -171,8 +223,6 @@ app.post("/api/create-pdf", async (req, res) => {
       font: regularFont,
       color: rgb(0.0588, 0.4118, 0.7686),
     });
-
-    let currentY = pageHeight - 172;
 
     // Sección de datos generales
     page.drawText("Datos generales del mes", {
@@ -306,26 +356,38 @@ app.post("/api/create-pdf", async (req, res) => {
     )}`;
 
     // Obtener la imagen del gráfico desde la URL generada
-    const chartImageBytes = await fetch(chartUrl).then((res) =>
-      res.arrayBuffer(),
-    );
-    const chartImage = await pdfDoc.embedPng(chartImageBytes);
+    try {
+      const chartResponse = await fetch(chartUrl);
+      const chartImageBytes = await chartResponse.arrayBuffer();
+      const chartImage = await pdfDoc.embedPng(chartImageBytes);
 
-    const chartWidth = 400;
-    const chartHeight = 200;
+      const chartWidth = 400;
+      const chartHeight = 200;
 
-    const chartX = (pageWidth - chartWidth) / 2;
+      const chartX = (pageWidth - chartWidth) / 2;
 
-    // Antes de dibujar el gráfico, verifica el espacio en la página
-    checkPageSpace(chartHeight + 35);
-    page.drawImage(chartImage, {
-      x: chartX,
-      y: currentY - chartHeight - 10,
-      width: chartWidth,
-      height: chartHeight,
-    });
+      // Antes de dibujar el gráfico, verifica el espacio en la página
+      checkPageSpace(chartHeight + 35);
+      page.drawImage(chartImage, {
+        x: chartX,
+        y: currentY - chartHeight - 10,
+        width: chartWidth,
+        height: chartHeight,
+      });
 
-    currentY -= chartHeight + 35;
+      currentY -= chartHeight + 35;
+    } catch (chartError) {
+      console.error("Error al cargar el gráfico:", chartError);
+      checkPageSpace(fontSize + 10);
+      page.drawText("No se pudo cargar el gráfico de evolución", {
+        x: margin,
+        y: currentY,
+        size: fontSize,
+        font: regularFont,
+        color: rgb(0.8, 0, 0),
+      });
+      currentY -= fontSize + 25;
+    }
 
     // Función para dibujar secciones de supervisión con enfoque en personas
     const drawSupervisionsSection = (title, sectionData) => {
@@ -394,7 +456,7 @@ app.post("/api/create-pdf", async (req, res) => {
 
       if (title.includes("Terreno")) {
         // Para Supervisión en Terreno, procesamos:
-        if (sectionData.asistencia) {
+        if (sectionData && sectionData.asistencia) {
           Object.keys(sectionData.asistencia).forEach((key) => {
             if (
               typeof sectionData.asistencia[key] === "boolean" &&
@@ -409,7 +471,7 @@ app.post("/api/create-pdf", async (req, res) => {
           });
         }
 
-        if (sectionData.condicionesTrabajo) {
+        if (sectionData && sectionData.condicionesTrabajo) {
           Object.keys(sectionData.condicionesTrabajo).forEach((key) => {
             if (
               typeof sectionData.condicionesTrabajo[key] === "boolean" &&
@@ -425,6 +487,7 @@ app.post("/api/create-pdf", async (req, res) => {
         }
 
         if (
+          sectionData &&
           sectionData.supervisionEjecutora &&
           typeof sectionData.supervisionEjecutora.supervisionEjecutora ===
             "boolean"
@@ -437,7 +500,7 @@ app.post("/api/create-pdf", async (req, res) => {
         }
       } else if (title.includes("Oficina")) {
         // Para Supervisión en Oficina, procesamos:
-        if (sectionData.requisitos) {
+        if (sectionData && sectionData.requisitos) {
           Object.keys(sectionData.requisitos).forEach((key) => {
             if (
               typeof sectionData.requisitos[key] === "boolean" &&
@@ -452,7 +515,7 @@ app.post("/api/create-pdf", async (req, res) => {
           });
         }
 
-        if (sectionData.revisionContrato) {
+        if (sectionData && sectionData.revisionContrato) {
           Object.keys(sectionData.revisionContrato).forEach((key) => {
             if (
               typeof sectionData.revisionContrato[key] === "boolean" &&
@@ -467,7 +530,7 @@ app.post("/api/create-pdf", async (req, res) => {
           });
         }
 
-        if (sectionData.obligacionesLaborales) {
+        if (sectionData && sectionData.obligacionesLaborales) {
           Object.keys(sectionData.obligacionesLaborales).forEach((key) => {
             if (
               typeof sectionData.obligacionesLaborales[key] === "boolean" &&
@@ -513,7 +576,7 @@ app.post("/api/create-pdf", async (req, res) => {
           const { key, value } = field;
 
           // Para cada campo, calculamos cuántas personas cumplen
-          const totalPersonas = fiscalizados || 100; // Total de personas fiscalizadas
+          const totalPersonas = fiscalizados ? parseInt(fiscalizados, 10) : 100; // Total de personas fiscalizadas
           const cumplieron = value
             ? Math.round(totalPersonas * 0.75)
             : Math.round(totalPersonas * 0.25); // Ejemplo: si value es true, 75% cumplieron
@@ -738,6 +801,12 @@ app.post("/api/create-pdf", async (req, res) => {
       return res
         .status(400)
         .json({ error: "Datos de entrada inválidos", details: error.message });
+    }
+    if (error.message && error.message.includes("fetch")) {
+      return res.status(500).json({
+        error: "Error al generar el gráfico",
+        details: "No se pudo conectar con el servicio de gráficos",
+      });
     }
     res.status(500).json({ error: "Error interno al generar el PDF" });
   }
