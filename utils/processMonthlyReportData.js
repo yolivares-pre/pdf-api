@@ -9,41 +9,41 @@ export function processMonthlyReportData(requestBody) {
   const body = requestBody;
 
   return {
-    mes: body.mes, // Luego se realiza un toLowerCase()
-    region: body.region, // Debe ser el nombre de la región, no el número
-    // Tabla inicial del documento
+    mes: body.mes,
+    region: body.region, // -> Por ahora provene de const regionVieneUsuario
+    firmante: body.firmante,
+    cargo: body.cargo,
+    cuposDisponibles: body.cuposDisponibles,
+    porcentajeCuposEjecutados: body.porcentajeCuposEjecutados,
     datosGenerales: {
-      // Los siguientes valores se calculan a partir del agregado de los campos del objeto asistencia
-      // del componente supervision-terreno/index.vue, a excepción de los señalados,
-      // los cuales deben ser ingresados manualmente por el usuario
-      encontradas: Number(body.datosGenerales.encontradas), // Contabiliza asistencia.presencia = true
-      ausentes: Number(body.datosGenerales.ausentes), // Contabiliza asistencia.presencia = false
-      renuncias: Number(body.datosGenerales.renuncias), // Ingresado por usuario
-      fallecidos: Number(body.datosGenerales.fallecidos), // Ingresado por usuario
-      fiscalizados: Number(body.datosGenerales.fiscalizados), // Contabiliza los registros en tabla realizados en mes
-      desvinculados: Number(body.datosGenerales.desvinculados || 0), // Ingresado por usuario
-      total: Number(body.datosGenerales.total), // Corresponde al universo de beneficiarios total en la región.
+      encontrados: Number(body.datosGenerales.encontrados),
+      ausentes: Number(body.datosGenerales.ausentes),
+      renuncias: Number(body.datosGenerales.renuncias),
+      desvinculados: Number(body.datosGenerales.desvinculados || 0),
+      fallecidos: Number(body.datosGenerales.fallecidos),
+      totalCuposEjecutados: Number(body.datosGenerales.totalCuposEjecutados),
+      totalSupervisionesTerreno: Number(
+        body.datosGenerales.totalSupervisionesTerreno,
+      ),
+      totalSupervisionesOficina: Number(
+        body.datosGenerales.totalSupervisionesOficina,
+      ),
+      totalSupervisiones: Number(body.datosGenerales.totalSupervisiones), // Contabiliza los registros en tabla realizados en mes
     },
-    supervisionTerreno: {
-      // Nuevo campo. Calcula cuántos informes fueron realizados en papel
-      // y cuántos en digital. En componente se llama `soportePapel`
-      tipoSoporteTerreno: body.supervisionTerreno.tipoSoporteTerreno,
-      // Se añaden todos los campos de asistencia, a excepción de `presencia`
-      // porque ese valor es relevante y se calcula en tabla de `datosGenerales`.
-      // Mantiene nombres del componente supervision-terreno
+    terreno: {
+      soportePapelTerreno: Number(body.supervisionTerreno.soportePapelTerreno),
       asistencia: {
         libroAsistencia: Number(
           body.supervisionTerreno.asistencia.libroAsistencia,
         ),
         firmaLibro: Number(body.supervisionTerreno.asistencia.firmaLibro),
+        presencia: Number(body.supervisionTerreno.asistencia.presencia),
         horariosFirma: Number(body.supervisionTerreno.asistencia.horariosFirma),
         funcionContrato: Number(
           body.supervisionTerreno.asistencia.funcionContrato,
         ),
         observaciones: body.supervisionTerreno.asistencia.observaciones || "",
       },
-      // Se añaden todos los campos de condicionesTrabajo
-      // Mantiene nombres del componente supervision-terreno
       condicionesTrabajo: {
         recibeEpp: Number(body.supervisionTerreno.condicionesTrabajo.recibeEpp),
         eppAdecuados: Number(
@@ -64,7 +64,6 @@ export function processMonthlyReportData(requestBody) {
           body.supervisionTerreno.condicionesTrabajo.observaciones || "",
       },
       supervisionEjecutora: {
-        // Ahora se toma el valor numérico enviado en lugar de asignar false por defecto
         supervisionEjecutora: Number(
           body.supervisionTerreno.supervisionEjecutora.supervisionEjecutora,
         ),
@@ -72,12 +71,8 @@ export function processMonthlyReportData(requestBody) {
           body.supervisionTerreno.supervisionEjecutora.observaciones || "",
       },
     },
-    supervisionOficina: {
-      // Nuevo campo. Calcula cuántos informes fueron realizados en papel
-      // y cuántos en digital. En componente se llama `soportePapel`
-      tipoSoporteOficina: body.supervisionOficina.tipoSoporteOficina,
-      // Se añaden todos los campos de requisitos
-      // Mantiene nombres del componente supervision-oficina
+    oficina: {
+      soportePapelOficina: Number(body.supervisionOficina.soportePapelOficina),
       requisitos: {
         cedulaIdentidad: Number(
           body.supervisionOficina.requisitos.cedulaIdentidad,
@@ -91,8 +86,6 @@ export function processMonthlyReportData(requestBody) {
         ),
         observaciones: body.supervisionOficina.requisitos.observaciones || "",
       },
-      // Se añaden todos los campos de revisionContrato
-      // Mantiene nombres del componente supervision-oficina
       revisionContrato: {
         debidamenteFirmado: Number(
           body.supervisionOficina.revisionContrato.debidamenteFirmado,
@@ -107,8 +100,6 @@ export function processMonthlyReportData(requestBody) {
         observaciones:
           body.supervisionOficina.revisionContrato.observaciones || "",
       },
-      // Se añaden todos los campos de obligacionesLaborales
-      // Mantiene nombres del componente supervision-oficina
       obligacionesLaborales: {
         actaEpp: Number(body.supervisionOficina.obligacionesLaborales.actaEpp),
         actaInsumos: Number(
@@ -131,10 +122,10 @@ export function processMonthlyReportData(requestBody) {
           body.supervisionOficina.obligacionesLaborales.observaciones || "",
       },
     },
-    comentariosGenerales: body.comentariosGenerales, // Proviene del formulario del componente informe-mensual
-    comentariosFiscalizacion: body.comentariosFiscalizacion, // Proviene del formulario del componente informe-mensual
-    otrosMeses: body.otrosMeses || [], // Se calcula a partir de datosGenerales.fiscalizados
-    firmante: body.firmante, // Proviene del formulario del componente informe-mensual
-    cargo: body.cargo, // Proviene del formulario del componente informe-mensual
+    listadoBeneficiarios: body.listadoBeneficiarios || "", // -> Proviene de const listadoBeneficiarios
+    avanceProyectos: body.avanceProyectos || "",
+    comentariosGenerales: body.comentariosGenerales,
+    comentariosSupervision: body.comentariosSupervision,
+    otrosMeses: body.otrosMeses || [], // -> Proviene de const otrosMeses
   };
 }
