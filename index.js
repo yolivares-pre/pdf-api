@@ -52,10 +52,10 @@ app.post("/api/create-pdf", async (req, res) => {
       mes,
       region,
       datosGenerales,
-      supervisionTerreno,
-      supervisionOficina,
+      terreno,
+      oficina,
       comentariosGenerales,
-      comentariosFiscalizacion,
+      comentariosSupervision,
       otrosMeses = [],
       firmante,
       cargo,
@@ -63,13 +63,13 @@ app.post("/api/create-pdf", async (req, res) => {
 
     // Extraer los campos de datosGenerales
     const {
-      encontradas = 0,
+      encontrados = 0,
       ausentes = 0,
       renuncias = 0,
       fallecidos = 0,
-      fiscalizados = 0,
+      totalSupervisiones = 0,
       desvinculados = 0,
-      total = 0,
+      totalCuposEjecutados = 0,
     } = datosGenerales;
 
     // Conversión de mes y región a texto
@@ -188,13 +188,13 @@ app.post("/api/create-pdf", async (req, res) => {
     currentY -= fontSize + lineSpacing;
 
     const dataGeneralBeneficiaries = [
-      ["Beneficiarias/os activas/os", `${encontradas}`],
+      ["Beneficiarias/os activas/os", `${encontrados}`],
       ["Beneficiarias/os no activas/os", `${ausentes}`],
       ["Beneficiarias/os que renunciaron", `${renuncias}`],
       ["Beneficiarias/os desvinculadas/os", `${desvinculados}`],
       ["Beneficiarias/os fallecidas/os", `${fallecidos}`],
-      ["Total beneficiarias/os", `${total}`],
-      ["Total supervisiones", `${fiscalizados}`],
+      ["Total beneficiarias/os", `${totalCuposEjecutados}`],
+      ["Total supervisiones", `${totalSupervisiones}`],
     ];
 
     let startXGeneral = margin;
@@ -575,7 +575,7 @@ app.post("/api/create-pdf", async (req, res) => {
         fields.forEach((field) => {
           const { key, value } = field;
           // Se utiliza el total de beneficiarias/os fiscalizadas de datosGenerales
-          const totalPersonas = fiscalizados ? parseInt(fiscalizados, 10) : 100;
+          const totalPersonas = totalSupervisiones ? parseInt(totalSupervisiones, 10) : 100;
           let cumplieron, noCumplieron;
           if (typeof value === "number") {
             // Si el valor es numérico, se usa directamente
@@ -723,8 +723,8 @@ app.post("/api/create-pdf", async (req, res) => {
     };
 
     // Llamar a la función para las secciones
-    drawSupervisionsSection("Supervisión en Terreno", supervisionTerreno);
-    drawSupervisionsSection("Supervisión en Oficina", supervisionOficina);
+    drawSupervisionsSection("Supervisión en Terreno", terreno);
+    drawSupervisionsSection("Supervisión en Oficina", oficina);
 
     // Sección de comentarios generales
     if (comentariosGenerales) {
@@ -786,7 +786,7 @@ app.post("/api/create-pdf", async (req, res) => {
     }
 
     // Sección de comentarios sobre fiscalización
-    if (comentariosFiscalizacion) {
+    if (comentariosSupervision) {
       checkPageSpace(fontSize * 2 + lineSpacing * 3);
 
       page.drawText("Comentarios sobre fiscalización", {
@@ -798,7 +798,7 @@ app.post("/api/create-pdf", async (req, res) => {
       });
       currentY -= fontSize + lineSpacing * 2;
 
-      const comentariosParagraphs = comentariosFiscalizacion
+      const comentariosParagraphs = comentariosSupervision
         .split("\n")
         .filter((p) => p.trim().length > 0);
 

@@ -69,15 +69,15 @@ El payload debe tener la siguiente estructura:
 - **mes**: (String) Número de mes (por ejemplo, `"4"` para Abril).
 - **region**: (String) Código de región (por ejemplo, `"05"` para Valparaíso).
 - **datosGenerales**: (Object) Con los siguientes campos:
-  - `encontradas`: Número
+  - `encontrados`: Número
   - `ausentes`: Número
   - `renuncias`: Número
   - `fallecidos`: Número
-  - `fiscalizados`: Número
+  - `totalSupervisiones`: Número
   - `desvinculados`: Número
-  - `total`: Número
-- **supervisionTerreno**: (Object) Con:
-  - `tipoSoporteTerreno`: (Object) Ejemplo: `{ "papel": Number, "digital": Number }`
+  - `totalCuposEjecutados`: Número
+- **terreno**: (Object) Con:
+  - `soportePapelTerreno`: Número
   - `asistencia`: (Object) Con campos numéricos:
     - `libroAsistencia`, `firmaLibro`, `horariosFirma`, `funcionContrato`
     - `observaciones`: (Opcional) Texto.
@@ -87,8 +87,8 @@ El payload debe tener la siguiente estructura:
   - `supervisionEjecutora`: (Object) Con:
     - `supervisionEjecutora`: Número
     - `observaciones`: (Opcional) Texto.
-- **supervisionOficina**: (Object) Con:
-  - `tipoSoporteOficina`: (Object) Ejemplo: `{ "papel": Number, "digital": Number }`
+- **oficina**: (Object) Con:
+  - `soportePapelOficina`: Número
   - `requisitos`: (Object) Con campos numéricos:
     - `cedulaIdentidad`, `declaracionCesantia`, `rsh`, `certificadoCotizaciones`
     - `observaciones`: (Opcional) Texto.
@@ -99,7 +99,7 @@ El payload debe tener la siguiente estructura:
     - `actaEpp`, `actaInsumos`, `liquidacionesSueldos`, `comprobantePagosPrevisionales`, `registroSupervisiones`, `registroAsistencia`
     - `observaciones`: (Opcional) Texto.
 - **comentariosGenerales**: (String) Comentarios generales.
-- **comentariosFiscalizacion**: (String) Comentarios sobre fiscalización.
+- **comentariosSupervision**: (String) Comentarios sobre fiscalización.
 - **otrosMeses**: (Array) Arreglo de objetos con datos de meses anteriores, por ejemplo:
   ```json
   [
@@ -116,19 +116,16 @@ El payload debe tener la siguiente estructura:
   "mes": "4",
   "region": "05",
   "datosGenerales": {
-    "encontradas": 50,
+    "encontrados": 50,
     "ausentes": 5,
     "renuncias": 2,
     "fallecidos": 0,
-    "fiscalizados": 40,
+    "totalSupervisiones": 40,
     "desvinculados": 1,
-    "total": 50
+    "totalCuposEjecutados": 50
   },
-  "supervisionTerreno": {
-    "tipoSoporteTerreno": {
-      "papel": 10,
-      "digital": 30
-    },
+  "terreno": {
+    "soportePapelTerreno": 10,
     "asistencia": {
       "libroAsistencia": 28,
       "firmaLibro": 27,
@@ -150,11 +147,8 @@ El payload debe tener la siguiente estructura:
       "observaciones": "Observaciones para supervisión ejecutora."
     }
   },
-  "supervisionOficina": {
-    "tipoSoporteOficina": {
-      "papel": 5,
-      "digital": 15
-    },
+  "oficina": {
+    "soportePapelOficina": 5,
     "requisitos": {
       "cedulaIdentidad": 18,
       "declaracionCesantia": 17,
@@ -180,7 +174,7 @@ El payload debe tener la siguiente estructura:
     }
   },
   "comentariosGenerales": "Comentarios generales del informe.",
-  "comentariosFiscalizacion": "Comentarios sobre fiscalización.",
+  "comentariosSupervision": "Comentarios sobre fiscalización.",
   "otrosMeses": [
     {"month": "3", "total": 35},
     {"month": "2", "total": 80},

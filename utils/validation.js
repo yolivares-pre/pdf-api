@@ -9,10 +9,10 @@ export const validateRequestBody = (body) => {
     "mes",
     "region",
     "datosGenerales",
-    "supervisionTerreno",
-    "supervisionOficina",
+    "terreno",
+    "oficina",
     "comentariosGenerales",
-    "comentariosFiscalizacion",
+    "comentariosSupervision",
     "otrosMeses",
     "firmante",
     "cargo",
@@ -32,13 +32,13 @@ export const validateRequestBody = (body) => {
 
   // Verificar campos dentro de datosGenerales
   const requiredDatosGeneralesFields = [
-    "encontradas",
+    "encontrados",
     "ausentes",
     "renuncias",
     "fallecidos",
-    "fiscalizados",
+    "totalSupervisiones",
     "desvinculados",
-    "total",
+    "totalCuposEjecutados",
   ];
 
   if (!body.datosGenerales || typeof body.datosGenerales !== "object") {
@@ -80,28 +80,28 @@ export const validateRequestBody = (body) => {
   }
 
   // Verificar objetos de supervisión terreno
-  if (!body.supervisionTerreno || typeof body.supervisionTerreno !== "object") {
-    const error = new Error("El campo 'supervisionTerreno' debe ser un objeto");
+  if (!body.terreno || typeof body.terreno !== "object") {
+    const error = new Error("El campo 'terreno' debe ser un objeto");
     error.name = "ValidationError";
     throw error;
   }
 
-  // Verificar tipoSoporteTerreno
-  if (!body.supervisionTerreno.hasOwnProperty("tipoSoporteTerreno")) {
+  // Verificar soportePapelTerreno
+  if (!body.terreno.hasOwnProperty("soportePapelTerreno")) {
     const error = new Error(
-      "El campo 'tipoSoporteTerreno' es requerido en supervisionTerreno",
+      "El campo 'soportePapelTerreno' es requerido en terreno",
     );
     error.name = "ValidationError";
     throw error;
   }
 
-  // Verificar estructura de asistencia en supervisionTerreno
+  // Verificar estructura de asistencia en terreno
   if (
-    !body.supervisionTerreno.asistencia ||
-    typeof body.supervisionTerreno.asistencia !== "object"
+    !body.terreno.asistencia ||
+    typeof body.terreno.asistencia !== "object"
   ) {
     const error = new Error(
-      "El campo 'asistencia' es requerido en supervisionTerreno y debe ser un objeto",
+      "El campo 'asistencia' es requerido en terreno y debe ser un objeto",
     );
     error.name = "ValidationError";
     throw error;
@@ -115,12 +115,12 @@ export const validateRequestBody = (body) => {
   ];
 
   const missingAsistenciaFields = requiredAsistenciaFields.filter(
-    (field) => !body.supervisionTerreno.asistencia.hasOwnProperty(field),
+    (field) => !body.terreno.asistencia.hasOwnProperty(field),
   );
 
   if (missingAsistenciaFields.length > 0) {
     const error = new Error(
-      `Faltan campos en supervisionTerreno.asistencia: ${missingAsistenciaFields.join(", ")}`,
+      `Faltan campos en terreno.asistencia: ${missingAsistenciaFields.join(", ")}`,
     );
     error.name = "ValidationError";
     throw error;
@@ -128,23 +128,23 @@ export const validateRequestBody = (body) => {
 
   // Verificar que los campos de asistencia sean booleanos
   for (const field of requiredAsistenciaFields) {
-    const value = body.supervisionTerreno.asistencia[field];
+    const value = body.terreno.asistencia[field];
     if (typeof value !== "boolean") {
       const error = new Error(
-        `El campo '${field}' en supervisionTerreno.asistencia debe ser un booleano`,
+        `El campo '${field}' en terreno.asistencia debe ser un booleano`,
       );
       error.name = "ValidationError";
       throw error;
     }
   }
 
-  // Verificar estructura de condicionesTrabajo en supervisionTerreno
+  // Verificar estructura de condicionesTrabajo en terreno
   if (
-    !body.supervisionTerreno.condicionesTrabajo ||
-    typeof body.supervisionTerreno.condicionesTrabajo !== "object"
+    !body.terreno.condicionesTrabajo ||
+    typeof body.terreno.condicionesTrabajo !== "object"
   ) {
     const error = new Error(
-      "El campo 'condicionesTrabajo' es requerido en supervisionTerreno y debe ser un objeto",
+      "El campo 'condicionesTrabajo' es requerido en terreno y debe ser un objeto",
     );
     error.name = "ValidationError";
     throw error;
@@ -162,12 +162,12 @@ export const validateRequestBody = (body) => {
   const missingCondicionesTrabajoFields =
     requiredCondicionesTrabajoFields.filter(
       (field) =>
-        !body.supervisionTerreno.condicionesTrabajo.hasOwnProperty(field),
+        !body.terreno.condicionesTrabajo.hasOwnProperty(field),
     );
 
   if (missingCondicionesTrabajoFields.length > 0) {
     const error = new Error(
-      `Faltan campos en supervisionTerreno.condicionesTrabajo: ${missingCondicionesTrabajoFields.join(", ")}`,
+      `Faltan campos en terreno.condicionesTrabajo: ${missingCondicionesTrabajoFields.join(", ")}`,
     );
     error.name = "ValidationError";
     throw error;
@@ -175,30 +175,30 @@ export const validateRequestBody = (body) => {
 
   // Verificar que los campos de condicionesTrabajo sean booleanos
   for (const field of requiredCondicionesTrabajoFields) {
-    const value = body.supervisionTerreno.condicionesTrabajo[field];
+    const value = body.terreno.condicionesTrabajo[field];
     if (typeof value !== "boolean") {
       const error = new Error(
-        `El campo '${field}' en supervisionTerreno.condicionesTrabajo debe ser un booleano`,
+        `El campo '${field}' en terreno.condicionesTrabajo debe ser un booleano`,
       );
       error.name = "ValidationError";
       throw error;
     }
   }
 
-  // Verificar estructura de supervisionEjecutora en supervisionTerreno
+  // Verificar estructura de supervisionEjecutora en terreno
   if (
-    !body.supervisionTerreno.supervisionEjecutora ||
-    typeof body.supervisionTerreno.supervisionEjecutora !== "object"
+    !body.terreno.supervisionEjecutora ||
+    typeof body.terreno.supervisionEjecutora !== "object"
   ) {
     const error = new Error(
-      "El campo 'supervisionEjecutora' es requerido en supervisionTerreno y debe ser un objeto",
+      "El campo 'supervisionEjecutora' es requerido en terreno y debe ser un objeto",
     );
     error.name = "ValidationError";
     throw error;
   }
 
   if (
-    !body.supervisionTerreno.supervisionEjecutora.hasOwnProperty(
+    !body.terreno.supervisionEjecutora.hasOwnProperty(
       "supervisionEjecutora",
     )
   ) {
@@ -210,7 +210,7 @@ export const validateRequestBody = (body) => {
   }
 
   if (
-    typeof body.supervisionTerreno.supervisionEjecutora.supervisionEjecutora !==
+    typeof body.terreno.supervisionEjecutora.supervisionEjecutora !==
     "boolean"
   ) {
     const error = new Error(
@@ -221,28 +221,28 @@ export const validateRequestBody = (body) => {
   }
 
   // Verificar objetos de supervisión oficina
-  if (!body.supervisionOficina || typeof body.supervisionOficina !== "object") {
-    const error = new Error("El campo 'supervisionOficina' debe ser un objeto");
+  if (!body.oficina || typeof body.oficina !== "object") {
+    const error = new Error("El campo 'oficina' debe ser un objeto");
     error.name = "ValidationError";
     throw error;
   }
 
-  // Verificar tipoSoporteOficina
-  if (!body.supervisionOficina.hasOwnProperty("tipoSoporteOficina")) {
+  // Verificar soportePapelOficina
+  if (!body.oficina.hasOwnProperty("soportePapelOficina")) {
     const error = new Error(
-      "El campo 'tipoSoporteOficina' es requerido en supervisionOficina",
+      "El campo 'soportePapelOficina' es requerido en oficina",
     );
     error.name = "ValidationError";
     throw error;
   }
 
-  // Verificar estructura de requisitos en supervisionOficina
+  // Verificar estructura de requisitos en oficina
   if (
-    !body.supervisionOficina.requisitos ||
-    typeof body.supervisionOficina.requisitos !== "object"
+    !body.oficina.requisitos ||
+    typeof body.oficina.requisitos !== "object"
   ) {
     const error = new Error(
-      "El campo 'requisitos' es requerido en supervisionOficina y debe ser un objeto",
+      "El campo 'requisitos' es requerido en oficina y debe ser un objeto",
     );
     error.name = "ValidationError";
     throw error;
@@ -256,12 +256,12 @@ export const validateRequestBody = (body) => {
   ];
 
   const missingRequisitosFields = requiredRequisitosFields.filter(
-    (field) => !body.supervisionOficina.requisitos.hasOwnProperty(field),
+    (field) => !body.oficina.requisitos.hasOwnProperty(field),
   );
 
   if (missingRequisitosFields.length > 0) {
     const error = new Error(
-      `Faltan campos en supervisionOficina.requisitos: ${missingRequisitosFields.join(", ")}`,
+      `Faltan campos en oficina.requisitos: ${missingRequisitosFields.join(", ")}`,
     );
     error.name = "ValidationError";
     throw error;
@@ -269,23 +269,23 @@ export const validateRequestBody = (body) => {
 
   // Verificar que los campos de requisitos sean booleanos
   for (const field of requiredRequisitosFields) {
-    const value = body.supervisionOficina.requisitos[field];
+    const value = body.oficina.requisitos[field];
     if (typeof value !== "boolean") {
       const error = new Error(
-        `El campo '${field}' en supervisionOficina.requisitos debe ser un booleano`,
+        `El campo '${field}' en oficina.requisitos debe ser un booleano`,
       );
       error.name = "ValidationError";
       throw error;
     }
   }
 
-  // Verificar estructura de revisionContrato en supervisionOficina
+  // Verificar estructura de revisionContrato en oficina
   if (
-    !body.supervisionOficina.revisionContrato ||
-    typeof body.supervisionOficina.revisionContrato !== "object"
+    !body.oficina.revisionContrato ||
+    typeof body.oficina.revisionContrato !== "object"
   ) {
     const error = new Error(
-      "El campo 'revisionContrato' es requerido en supervisionOficina y debe ser un objeto",
+      "El campo 'revisionContrato' es requerido en oficina y debe ser un objeto",
     );
     error.name = "ValidationError";
     throw error;
@@ -299,12 +299,12 @@ export const validateRequestBody = (body) => {
   ];
 
   const missingRevisionContratoFields = requiredRevisionContratoFields.filter(
-    (field) => !body.supervisionOficina.revisionContrato.hasOwnProperty(field),
+    (field) => !body.oficina.revisionContrato.hasOwnProperty(field),
   );
 
   if (missingRevisionContratoFields.length > 0) {
     const error = new Error(
-      `Faltan campos en supervisionOficina.revisionContrato: ${missingRevisionContratoFields.join(", ")}`,
+      `Faltan campos en oficina.revisionContrato: ${missingRevisionContratoFields.join(", ")}`,
     );
     error.name = "ValidationError";
     throw error;
@@ -312,23 +312,23 @@ export const validateRequestBody = (body) => {
 
   // Verificar que los campos de revisionContrato sean booleanos
   for (const field of requiredRevisionContratoFields) {
-    const value = body.supervisionOficina.revisionContrato[field];
+    const value = body.oficina.revisionContrato[field];
     if (typeof value !== "boolean") {
       const error = new Error(
-        `El campo '${field}' en supervisionOficina.revisionContrato debe ser un booleano`,
+        `El campo '${field}' en oficina.revisionContrato debe ser un booleano`,
       );
       error.name = "ValidationError";
       throw error;
     }
   }
 
-  // Verificar estructura de obligacionesLaborales en supervisionOficina
+  // Verificar estructura de obligacionesLaborales en oficina
   if (
-    !body.supervisionOficina.obligacionesLaborales ||
-    typeof body.supervisionOficina.obligacionesLaborales !== "object"
+    !body.oficina.obligacionesLaborales ||
+    typeof body.oficina.obligacionesLaborales !== "object"
   ) {
     const error = new Error(
-      "El campo 'obligacionesLaborales' es requerido en supervisionOficina y debe ser un objeto",
+      "El campo 'obligacionesLaborales' es requerido en oficina y debe ser un objeto",
     );
     error.name = "ValidationError";
     throw error;
@@ -346,12 +346,12 @@ export const validateRequestBody = (body) => {
   const missingObligacionesLaboralesFields =
     requiredObligacionesLaboralesFields.filter(
       (field) =>
-        !body.supervisionOficina.obligacionesLaborales.hasOwnProperty(field),
+        !body.oficina.obligacionesLaborales.hasOwnProperty(field),
     );
 
   if (missingObligacionesLaboralesFields.length > 0) {
     const error = new Error(
-      `Faltan campos en supervisionOficina.obligacionesLaborales: ${missingObligacionesLaboralesFields.join(", ")}`,
+      `Faltan campos en oficina.obligacionesLaborales: ${missingObligacionesLaboralesFields.join(", ")}`,
     );
     error.name = "ValidationError";
     throw error;
@@ -359,10 +359,10 @@ export const validateRequestBody = (body) => {
 
   // Verificar que los campos de obligacionesLaborales sean booleanos
   for (const field of requiredObligacionesLaboralesFields) {
-    const value = body.supervisionOficina.obligacionesLaborales[field];
+    const value = body.oficina.obligacionesLaborales[field];
     if (typeof value !== "boolean") {
       const error = new Error(
-        `El campo '${field}' en supervisionOficina.obligacionesLaborales debe ser un booleano`,
+        `El campo '${field}' en oficina.obligacionesLaborales debe ser un booleano`,
       );
       error.name = "ValidationError";
       throw error;
@@ -422,7 +422,7 @@ export const validateRequestBody = (body) => {
     throw error;
   }
 
-  // Verificar que comentariosGenerales y comentariosFiscalizacion sean string (pueden estar vacíos)
+  // Verificar que comentariosGenerales y comentariosSupervision sean string (pueden estar vacíos)
   if (typeof body.comentariosGenerales !== "string") {
     const error = new Error(
       "El campo 'comentariosGenerales' debe ser un texto",
@@ -431,9 +431,9 @@ export const validateRequestBody = (body) => {
     throw error;
   }
 
-  if (typeof body.comentariosFiscalizacion !== "string") {
+  if (typeof body.comentariosSupervision !== "string") {
     const error = new Error(
-      "El campo 'comentariosFiscalizacion' debe ser un texto",
+      "El campo 'comentariosSupervision' debe ser un texto",
     );
     error.name = "ValidationError";
     throw error;
